@@ -53,8 +53,9 @@ sdrplay_api_DeviceT *chosenDevice = NULL;
 void StreamACallback(short *xi, short *xq, sdrplay_api_StreamCbParamsT *params,
                      unsigned int numSamples, unsigned int reset,
                      void *cbContext) {
-  if (reset)
+  if (reset) {
     printf("sdrplay_api_StreamACallback: numSamples=%d\n", numSamples);
+  }
 
   // Process stream callback data here
 
@@ -64,9 +65,9 @@ void StreamACallback(short *xi, short *xq, sdrplay_api_StreamCbParamsT *params,
 void StreamBCallback(short *xi, short *xq, sdrplay_api_StreamCbParamsT *params,
                      unsigned int numSamples, unsigned int reset,
                      void *cbContext) {
-  if (reset)
+  if (reset) {
     printf("sdrplay_api_StreamBCallback: numSamples=%d\n", numSamples);
-
+  }
   // Process stream callback data here - this callback will only be used in dual
   // tuner mode
 
@@ -163,6 +164,7 @@ int main(int argc, char *argv[]) {
 
   unsigned int chosenIdx = 0;
 
+  // init keyboard for control
   init_keyboard();
 
   if ((argc > 1) && (argc < 4)) {
@@ -219,7 +221,7 @@ int main(int argc, char *argv[]) {
              sdrplay_api_GetErrorString(err));
       goto UnlockDeviceAndCloseApi;
     }
-    printf("MaxDevs=%d NumDevs=%d\n",
+    printf("MaxDevs=%lu NumDevs=%d\n",
            sizeof(devs) / sizeof(sdrplay_api_DeviceT), ndev);
     if (ndev > 0) {
       for (i = 0; i < (int)ndev; i++) {
