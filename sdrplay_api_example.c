@@ -68,8 +68,6 @@ void StreamBCallback(short *xi, short *xq, sdrplay_api_StreamCbParamsT *params,
   if (reset) {
     printf("sdrplay_api_StreamBCallback: numSamples=%d\n", numSamples);
   }
-  // Process stream callback data here - this callback will only be used in dual
-  // tuner mode
 
   return;
 }
@@ -369,7 +367,7 @@ int main(int argc, char *argv[]) {
                                       // master is not yet running
         {
           while (1) {
-            sleep(1);
+            usleep(1000);
             if (masterInitialised) // Keep polling flag set in event callback
                                    // until the master is initialised
             {
@@ -425,7 +423,7 @@ int main(int argc, char *argv[]) {
             }
           }
         }
-        sleep(1);
+        usleep(100);
       }
 
       // Finished with device so uninitialise it
@@ -438,7 +436,7 @@ int main(int argc, char *argv[]) {
                                             // and the slave is still running
         {
           while (1) {
-            sleep(1);
+            usleep(1000);
             if (slaveUninitialised) // Keep polling flag set in event callback
                                     // until the slave is uninitialised
             {

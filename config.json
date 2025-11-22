@@ -1,0 +1,14 @@
+{
+  "tuner": "A",
+  "master_slave": "Master",
+  "rspDuoSampleFreq": 6000000.0,
+  "fsFreqHz": 800000000.0,
+  "rfFreqHz": 2200000000.0,
+  "gRdB": 40,
+  "LNAstate": 5,
+  "maxGain": 59,
+  "minGain": 20,
+  "bandwidth": "sdrplay_api_BW_1_536",
+  "IF": "sdrplay_api_IF_Zero",
+  "AGC": "sdrplay_api_AGC_DISABLE"
+}
