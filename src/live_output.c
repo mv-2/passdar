@@ -7,7 +7,7 @@
 #include <sdrplay_api_tuner.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
+// #include <stdlib.h>
 #include <sys/select.h>
 #include <termios.h>
 #include <unistd.h>

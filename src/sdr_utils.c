@@ -1,9 +1,9 @@
 #include "fourier.h"
-#include "sdrplay_api.h"
 #include <assert.h>
 #include <cjson/cJSON.h>
 #include <fcntl.h>
 #include <inttypes.h>
+#include <sdrplay_api.h>
 #include <sdrplay_api_control.h>
 #include <sdrplay_api_rspDuo.h>
 #include <sdrplay_api_tuner.h>
