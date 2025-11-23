@@ -10,4 +10,4 @@ CONFIG_PATH ?= config.json
 
 run_live:
 	clang fourier.c live_output.c -o live.out -lsdrplay_api -L/usr/local/lib -lm -lcjson
-	./live.out $(CONFIG_PATH)
+	./live.out "$(CONFIG_PATH)"
