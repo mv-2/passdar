@@ -6,25 +6,25 @@
 // TODO: ADD FFT AND RADIX CONTROL
 
 // Computes real resultant DFT of signal
-int dft_real(short *samples_re, short *samples_im, float *result_buffer,
+int dft_real(short *samples_re, short *samples_im, double *result_buffer,
              unsigned int length) {
 
   // temp value to store x[k] during summation
-  float _Complex x_k;
+  double complex x_k;
   // TODO: Stop reallocating this somehow
   // float result_buffer[length];
 
   for (int k = 0; k < length; k++) {
-    x_k = 0.0f;
+    x_k = 0.0;
     for (int n = 0; n < length; n++) {
       x_k = x_k +
-            ((float)samples_re[n] + (float)samples_im[n] * (float)_Complex_I) *
-                expf(-(float)_Complex_I * 2.0f * (float)M_PI * (float)k *
-                     (float)n / (float)length);
+            ((double)samples_re[n] + (double)samples_im[n] * (double)I) *
+                cexp(-I * 2.0 * M_PI * (double)k * (double)n / (double)length);
     }
-    printf("Real: %f, Imaginary: %f, Magnitude: %f\n", creal(x_k), cimag(x_k),
-           cabsf(x_k));
-    // result_buffer[k] = cabsf(x_k);
+    // printf("Real: %f, Imaginary: %f, Magnitude: %f\n", creal(x_k),
+    // cimag(x_k),
+    //        cabs(x_k));
+    result_buffer[k] = cabs(x_k);
   }
   return 0;
 }
