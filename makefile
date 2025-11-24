@@ -7,5 +7,5 @@ run_example:
 	./example.out A ms
 
 run_live:
-	clang src/fourier.c src/sdr_utils.c src/live_output.c -o live.out -lsdrplay_api -L/usr/local/lib -lm -lcjson
+	clang src/fourier.c src/sdr_utils.c src/live_output.c libs/gnuplot_i.c -o live.out -lsdrplay_api -L/usr/local/lib -lm -lcjson
 	./live.out config.json

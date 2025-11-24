@@ -1,4 +1,3 @@
-#include "fourier.h"
 #include <assert.h>
 #include <cjson/cJSON.h>
 #include <fcntl.h>
@@ -245,35 +244,6 @@ void print_config(struct Config cfg) {
          tuner_str, ms_str, cfg.rspDuoSampleFreq, cfg.fsFreqHz, cfg.rfFreqHz,
          cfg.gRdB, cfg.LNAstate, cfg.maxGain, cfg.minGain, BW_str, IF_str,
          AGC_str);
-}
-
-double result_bufferA[2000];
-
-void StreamACallback(short *xi, short *xq, sdrplay_api_StreamCbParamsT *params,
-                     unsigned int numSamples, unsigned int reset,
-                     void *cbContext) {
-  if (reset) {
-    printf("sdrplay_api_StreamACallback: numSamples=%d\n", numSamples);
-  }
-  // printf("A\n");
-
-  dft_real(xi, xq, result_bufferA, numSamples);
-  for (int i = 0; i < numSamples; i++) {
-    printf("%d: %f\n", i, result_bufferA[i]);
-  }
-
-  return;
-}
-
-void StreamBCallback(short *xi, short *xq, sdrplay_api_StreamCbParamsT *params,
-                     unsigned int numSamples, unsigned int reset,
-                     void *cbContext) {
-  if (reset) {
-    printf("sdrplay_api_StreamBCallback: numSamples=%d\n", numSamples);
-  }
-  printf("B\n");
-
-  return;
 }
 
 void usage(void) {
