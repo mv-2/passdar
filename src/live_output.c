@@ -11,9 +11,9 @@
 #include <sys/select.h>
 #include <termios.h>
 #include <unistd.h>
-
-#include "../libs/gnuplot_i.h"
+// TEST: LOOK INTO IF MUTEX IS THE SOLUTION
 #include "fourier.h"
+#include "plot_funcs.h"
 #include "sdr_utils.h"
 #include "sdrplay_api.h"
 
@@ -51,13 +51,13 @@ int getch() {
 
 int masterInitialised = 0;
 int slaveUninitialised = 0;
-double result_bufferA[2048];
-double xlabel_buffer[2048];
+// TEST: Find max buffer length
+double result_bufferA[3000];
+double xlabel_buffer[3000];
+FILE *gp_A;
 // float result_bufferB;
 
 sdrplay_api_DeviceT *chosenDevice = NULL;
-
-gnuplot_ctrl *plot_handle;
 
 void StreamACallback(short *xi, short *xq, sdrplay_api_StreamCbParamsT *params,
                      unsigned int numSamples, unsigned int reset,
@@ -67,13 +67,12 @@ void StreamACallback(short *xi, short *xq, sdrplay_api_StreamCbParamsT *params,
   }
 
   dft_real(xi, xq, result_bufferA, numSamples);
-  // for (int i = 0; i < numSamples; i++) {
-  //   printf("%d: %f\n", i, result_bufferA[i]);
-  // }
-  // FIXME: Need to find another way to update plot via this handle.
-  gnuplot_plot_coordinates(plot_handle, xlabel_buffer, result_bufferA,
-                           numSamples, "Live Spectra");
-
+  // dump_spectrum(xlabel_buffer, result_bufferA, numSamples, FILE_A_NAME);
+  fprintf(gp_A, "plot '-' with lines\n");
+  for (int i = 0; i < numSamples; i++) {
+    fprintf(gp_A, "%fl %fl", xlabel_buffer[i], result_bufferA[i]);
+  }
+  fprintf(gp_A, "e\n");
   return;
 }
 
@@ -168,13 +167,18 @@ int main(int argc, char *argv[]) {
   struct Config cfg;
   char c;
 
+  // create plot pipes??
+  gp_A = popen("gnuplot -persist", "w");
+  if (!gp_A) {
+    fprintf(stderr, "Error opening gnuplot A pipe\n");
+    return 1;
+  }
+  fprintf(gp_A, "set terminal png\n");
+
   // fill xlabel buffer
   for (int i = 0; i < 2048; i++) {
     xlabel_buffer[i] = (double)i;
   }
-
-  plot_handle = gnuplot_init();
-  gnuplot_setstyle(plot_handle, "lines");
 
   unsigned int chosenIdx = 0;
 
@@ -423,8 +427,8 @@ int main(int argc, char *argv[]) {
   }
 
   // close other devices & handles
-  gnuplot_close(plot_handle);
   close_keyboard();
+  pclose(gp_A);
 
   return 0;
 }
