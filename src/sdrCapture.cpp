@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <iostream>
 #include <sdrplay_api.h>
+#include <sdrplay_api_control.h>
 #include <sdrplay_api_dev.h>
 #include <sdrplay_api_rx_channel.h>
 
@@ -16,7 +17,19 @@ sdrplay_api_RxChannelParamsT *chParams;
 const unsigned int MaxDevs = 1;
 
 // TODO: Find if this is sane
-Receiver::Receiver(uint32_t _fc) { fc = _fc; }
+Receiver::Receiver(uint32_t _fc, int _agc_bandwidth_nr, int _agc_set_point_nr,
+                   int _gRdB_A, int _gRdB_B, int _lna_state, int _dec_factor,
+                   sdrplay_api_If_kHzT _ifType, sdrplay_api_Bw_MHzT _bwType) {
+  fc = _fc;
+  agc_bandwidth_nr = _agc_bandwidth_nr;
+  agc_set_point_nr = _agc_set_point_nr;
+  gRdB_A = _gRdB_A;
+  gRdB_B = _gRdB_B;
+  lna_state = _lna_state;
+  dec_factor = _dec_factor;
+  ifType = _ifType;
+  bwType = _bwType;
+}
 
 void Receiver::start_api() {
   // open API
@@ -43,6 +56,11 @@ void Receiver::start_api() {
 
   // assign device handle and set tuner mode
   get_device();
+
+  // TODO: PARAMETER VALIDATION STEP
+
+  // Set all parameters following validation
+  set_device_parameters();
 }
 
 void Receiver::get_device() {
@@ -147,6 +165,38 @@ void Receiver::set_device_parameters() {
     cleanup();
     exit(1);
   }
+
+  // Tuner frequency (??)
+  chParams->tunerParams.rfFreq.rfHz = fc;
+
+  // AGC
+  // TODO: INVESTIGATE
+  chParams->ctrlParams.agc.enable = sdrplay_api_AGC_DISABLE;
+  if (agc_bandwidth_nr == 5) {
+    chParams->ctrlParams.agc.enable = sdrplay_api_AGC_5HZ;
+  } else if (agc_bandwidth_nr == 50) {
+    chParams->ctrlParams.agc.enable = sdrplay_api_AGC_50HZ;
+  } else if (agc_bandwidth_nr == 100) {
+    chParams->ctrlParams.agc.enable = sdrplay_api_AGC_100HZ;
+  }
+  if (chParams->ctrlParams.agc.enable != sdrplay_api_AGC_DISABLE) {
+    chParams->ctrlParams.agc.setPoint_dBfs =
+        (0 < agc_set_point_nr) ? 0 : agc_set_point_nr;
+  }
+
+  // Set gain reduction and LNA state
+  deviceParams->rxChannelA->tunerParams.gain.gRdB = gRdB_A;
+  deviceParams->rxChannelB->tunerParams.gain.gRdB = gRdB_B;
+  deviceParams->rxChannelA->tunerParams.gain.LNAstate = lna_state;
+  deviceParams->rxChannelB->tunerParams.gain.LNAstate = lna_state;
+
+  // set decimation parameters
+  chParams->ctrlParams.decimation.enable = 1;
+  chParams->ctrlParams.decimation.decimationFactor = dec_factor;
+  chParams->tunerParams.ifType = ifType;
+  chParams->tunerParams.bwType = bwType;
+
+  // TODO: Filters & callback functions
 }
 
 // Cleanup function.
