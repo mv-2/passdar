@@ -20,7 +20,11 @@ public:
   void initialise();
   void stop_api();
 
-private:
+  // API control functions
+  void get_device();
+  void set_device_parameters();
+  void cleanup();
+
   // Required params
   uint32_t fc;
   int agc_bandwidth_nr;
@@ -34,11 +38,6 @@ private:
   sdrplay_api_Bw_MHzT bwType;
   bool rf_notch_enable;
   bool dab_notch_enable;
-
-  // API control functions
-  void get_device();
-  void set_device_parameters();
-  void cleanup();
 
   // Callback functions
   void stream_a_callback(short *xi, short *xq,

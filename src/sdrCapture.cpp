@@ -46,7 +46,7 @@ void Receiver::start_api() {
 
   float apiVer = 0.0;
   // Check API versions match
-  if ((sdrErr = sdrplay_api_ApiVersion(&apiVer))) {
+  if ((sdrErr = sdrplay_api_ApiVersion(&apiVer)) != sdrplay_api_Success) {
     std::cerr << "API version check failed "
               << sdrplay_api_GetErrorString(sdrErr) << std::endl;
     cleanup();
@@ -76,6 +76,7 @@ void Receiver::stop_api() {
     exit(1);
   }
   sdrplay_api_ReleaseDevice(chosenDevice);
+  sdrplay_api_UnlockDeviceApi();
   sdrplay_api_Close();
 }
 

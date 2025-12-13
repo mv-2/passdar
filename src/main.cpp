@@ -62,16 +62,16 @@ int main(void) {
   Receiver receiver = Receiver(fc, agc_bandwidth_nr, agc_set_point_nr, gRdB_A,
                                gRdB_B, lna_state, dec_factor, ifType, bwType,
                                rf_notch_enable, dab_notch_enable);
-
-  // receiver.initialise();
   receiver.start_api();
+  receiver.initialise();
 
-  // while (true) {
-  //   if (break_loop()) {
-  //     break;
-  //   }
-  //   sleep(1);
-  // }
+  while (true) {
+    if (break_loop()) {
+      break;
+    }
+    sleep(1);
+  }
 
   receiver.stop_api();
+  return 0;
 }
