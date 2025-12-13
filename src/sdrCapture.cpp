@@ -15,6 +15,7 @@ sdrplay_api_DeviceParamsT *deviceParams = NULL;
 sdrplay_api_CallbackFnsT cbFns;
 sdrplay_api_RxChannelParamsT *chParams;
 
+// One (1) device
 const unsigned int MaxDevs = 1;
 
 // TODO: Find if this is sane

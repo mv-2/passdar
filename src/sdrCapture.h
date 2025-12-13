@@ -1,8 +1,8 @@
 #ifndef SDRCAPTURE_H
 #define SDRCAPTURE_H
 
-#include "sdrplay_api.h"
 #include <cstdint>
+#include <sdrplay_api.h>
 #include <sdrplay_api_callback.h>
 #include <sdrplay_api_tuner.h>
 #include <stdint.h>
@@ -16,6 +16,9 @@ public:
            int gRdB_B, int lna_state, int dec_factor,
            sdrplay_api_If_kHzT ifType, sdrplay_api_Bw_MHzT bwType,
            bool rf_notch_enable, bool dab_notch_enable);
+  void start_api();
+  void initialise();
+  void stop_api();
 
 private:
   // Required params
@@ -33,12 +36,9 @@ private:
   bool dab_notch_enable;
 
   // API control functions
-  void start_api();
   void get_device();
   void set_device_parameters();
   void cleanup();
-  void stop_api();
-  void initialise();
 
   // Callback functions
   void stream_a_callback(short *xi, short *xq,
