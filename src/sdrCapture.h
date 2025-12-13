@@ -3,12 +3,22 @@
 
 #include "sdrplay_api.h"
 #include <cstdint>
+#include <sdrplay_api_callback.h>
 #include <sdrplay_api_tuner.h>
 #include <stdint.h>
 
 class Receiver {
   // NOTE: CHECK WHAT IS PUBLIC LATER
+  // TODO: Docstrings
 public:
+  // Contstructor
+  Receiver(uint32_t fc, int agc_bandwidth_nr, int agc_set_point_nr, int gRdB_A,
+           int gRdB_B, int lna_state, int dec_factor,
+           sdrplay_api_If_kHzT ifType, sdrplay_api_Bw_MHzT bwType,
+           bool rf_notch_enable, bool dab_notch_enable);
+
+private:
+  // Required params
   uint32_t fc;
   int agc_bandwidth_nr;
   int agc_set_point_nr;
@@ -19,16 +29,52 @@ public:
   int dec_factor;
   sdrplay_api_If_kHzT ifType;
   sdrplay_api_Bw_MHzT bwType;
+  bool rf_notch_enable;
+  bool dab_notch_enable;
 
-  Receiver(uint32_t _fc, int _agc_bandwidth_nr, int _agc_set_point_nr,
-           int _gRdB_A, int _gRdB_B, int lna_state, int _dec_factor,
-           sdrplay_api_If_kHzT _ifType, sdrplay_api_Bw_MHzT _bwType);
-
-  // TODO: Docstrings
+  // API control functions
   void start_api();
   void get_device();
   void set_device_parameters();
   void cleanup();
+  void stop_api();
+  void initialise();
+
+  // Callback functions
+  void stream_a_callback(short *xi, short *xq,
+                         sdrplay_api_StreamCbParamsT *params,
+                         unsigned int numSamples, unsigned int reset,
+                         void *cbContext);
+  void stream_b_callback(short *xi, short *xq,
+                         sdrplay_api_StreamCbParamsT *params,
+                         unsigned int numSamples, unsigned int reset,
+                         void *cbContext);
+  void event_callback(sdrplay_api_EventT eventId,
+                      sdrplay_api_TunerSelectT tuner,
+                      sdrplay_api_EventParamsT *params, void *cbContext);
+
+  // Static casting of functions
+  static void stream_a_callback_static(short *xi, short *xq,
+                                       sdrplay_api_StreamCbParamsT *params,
+                                       unsigned int numSamples,
+                                       unsigned int reset, void *cbContext) {
+    static_cast<Receiver *>(cbContext)->stream_a_callback(
+        xi, xq, params, numSamples, reset, cbContext);
+  }
+  static void stream_b_callback_static(short *xi, short *xq,
+                                       sdrplay_api_StreamCbParamsT *params,
+                                       unsigned int numSamples,
+                                       unsigned int reset, void *cbContext) {
+    static_cast<Receiver *>(cbContext)->stream_b_callback(
+        xi, xq, params, numSamples, reset, cbContext);
+  }
+  static void event_callback_static(sdrplay_api_EventT eventId,
+                                    sdrplay_api_TunerSelectT tuner,
+                                    sdrplay_api_EventParamsT *params,
+                                    void *cbContext) {
+    static_cast<Receiver *>(cbContext)->event_callback(eventId, tuner, params,
+                                                       cbContext);
+  }
 };
 
 #endif

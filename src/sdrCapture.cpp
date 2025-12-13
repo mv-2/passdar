@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <iostream>
 #include <sdrplay_api.h>
+#include <sdrplay_api_callback.h>
 #include <sdrplay_api_control.h>
 #include <sdrplay_api_dev.h>
 #include <sdrplay_api_rx_channel.h>
@@ -19,7 +20,8 @@ const unsigned int MaxDevs = 1;
 // TODO: Find if this is sane
 Receiver::Receiver(uint32_t _fc, int _agc_bandwidth_nr, int _agc_set_point_nr,
                    int _gRdB_A, int _gRdB_B, int _lna_state, int _dec_factor,
-                   sdrplay_api_If_kHzT _ifType, sdrplay_api_Bw_MHzT _bwType) {
+                   sdrplay_api_If_kHzT _ifType, sdrplay_api_Bw_MHzT _bwType,
+                   bool _rf_notch_enable, bool _dab_notch_enable) {
   fc = _fc;
   agc_bandwidth_nr = _agc_bandwidth_nr;
   agc_set_point_nr = _agc_set_point_nr;
@@ -29,6 +31,8 @@ Receiver::Receiver(uint32_t _fc, int _agc_bandwidth_nr, int _agc_set_point_nr,
   dec_factor = _dec_factor;
   ifType = _ifType;
   bwType = _bwType;
+  rf_notch_enable = _rf_notch_enable;
+  dab_notch_enable = _dab_notch_enable;
 }
 
 void Receiver::start_api() {
@@ -57,10 +61,31 @@ void Receiver::start_api() {
   // assign device handle and set tuner mode
   get_device();
 
-  // TODO: PARAMETER VALIDATION STEP
-
   // Set all parameters following validation
   set_device_parameters();
+
+  // TODO: PARAMETER VALIDATION
+}
+
+void Receiver::stop_api() {
+  if ((sdrErr = sdrplay_api_Uninit(chosenDevice->dev)) != sdrplay_api_Success) {
+    std::cerr << "sdrplay_apit_Uninit failed "
+              << sdrplay_api_GetErrorString(sdrErr) << std::endl;
+    cleanup();
+    exit(1);
+  }
+  sdrplay_api_ReleaseDevice(chosenDevice);
+  sdrplay_api_Close();
+}
+
+void Receiver::initialise() {
+  if ((sdrErr = sdrplay_api_Init(chosenDevice->dev, &cbFns, NULL)) !=
+      sdrplay_api_Success) {
+    std::cerr << "sdrplay_api_init failed "
+              << sdrplay_api_GetErrorString(sdrErr) << std::endl;
+    sdrplay_api_Close();
+    exit(1);
+  }
 }
 
 void Receiver::get_device() {
@@ -196,8 +221,33 @@ void Receiver::set_device_parameters() {
   chParams->tunerParams.ifType = ifType;
   chParams->tunerParams.bwType = bwType;
 
-  // TODO: Filters & callback functions
+  // Notch filter flags
+  chParams->rspDuoTunerParams.rfNotchEnable = rf_notch_enable;
+  chParams->rspDuoTunerParams.rfDabNotchEnable = dab_notch_enable;
+
+  // Callback function assignment
+  cbFns.StreamACbFn = stream_a_callback_static;
+  cbFns.StreamBCbFn = stream_b_callback_static;
+  cbFns.EventCbFn = event_callback_static;
 }
+
+// Receiver A data callback
+void Receiver::stream_a_callback(short *xi, short *xq,
+                                 sdrplay_api_StreamCbParamsT *params,
+                                 unsigned int numSamples, unsigned int reset,
+                                 void *cbContext) {}
+
+// Receiver B data callback
+void Receiver::stream_b_callback(short *xi, short *xq,
+                                 sdrplay_api_StreamCbParamsT *params,
+                                 unsigned int numSamples, unsigned int reset,
+                                 void *cbContext) {}
+
+// Event callback (funnily enough)
+void Receiver::event_callback(sdrplay_api_EventT eventId,
+                              sdrplay_api_TunerSelectT tuner,
+                              sdrplay_api_EventParamsT *params,
+                              void *cbContext) {}
 
 // Cleanup function.
 // NOTE: May not be necessary but leaving in in case of additional cleanup
