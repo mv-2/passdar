@@ -1,4 +1,3 @@
-#include <iostream>
 #include <sdrplay_api.h>
 #include <sdrplay_api_tuner.h>
 #include <stdio.h>
@@ -8,6 +7,7 @@
 #include <unistd.h>
 
 #include "sdrCapture.h"
+#include "spectrumData.h"
 
 // Keyboard functions adapted from
 // <https://www.flipcode.com/archives/_kbhit_for_Linux.shtml>

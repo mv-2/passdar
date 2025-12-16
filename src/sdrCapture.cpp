@@ -237,13 +237,45 @@ void Receiver::set_device_parameters() {
 void Receiver::stream_a_callback(short *xi, short *xq,
                                  sdrplay_api_StreamCbParamsT *params,
                                  unsigned int numSamples, unsigned int reset,
-                                 void *cbContext) {}
+                                 void *cbContext) {
+  // Allocate memory for buffer w/ IQ data
+  short int *buffer_A = (short int *)malloc(2 * numSamples * sizeof(short));
+
+  // if (buffer_A == NULL) {
+  //   std::cerr << "Stream A malloc error" << std::endl;
+  //   exit(1);
+  // }
+  //
+  // // Fill buffer
+  // for (unsigned int i = 0; i < numSamples; i++) {
+  //   buffer_A[2 * i] = xi[i];
+  //   buffer_A[2 * i + 1] = xq[i];
+  // }
+
+  return;
+}
 
 // Receiver B data callback
 void Receiver::stream_b_callback(short *xi, short *xq,
                                  sdrplay_api_StreamCbParamsT *params,
                                  unsigned int numSamples, unsigned int reset,
-                                 void *cbContext) {}
+                                 void *cbContext) {
+  // Allocate memory for buffer w/ IQ data
+  short int *buffer_B = (short int *)malloc(2 * numSamples * sizeof(short));
+
+  // if (buffer_B == NULL) {
+  //   std::cerr << "Stream B malloc error" << std::endl;
+  //   exit(1);
+  // }
+  //
+  // // Fill buffer
+  // for (unsigned int i = 0; i < numSamples; i++) {
+  //   buffer_B[2 * i] = xi[i];
+  //   buffer_B[2 * i + 1] = xq[i];
+  // }
+
+  return;
+}
 
 // Event callback (funnily enough)
 void Receiver::event_callback(sdrplay_api_EventT eventId,
