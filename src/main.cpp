@@ -1,4 +1,3 @@
-#include <functional>
 #include <sdrplay_api.h>
 #include <sdrplay_api_tuner.h>
 #include <stdio.h>
