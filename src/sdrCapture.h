@@ -7,23 +7,25 @@
 #include <sdrplay_api_tuner.h>
 #include <stdint.h>
 
+#include "spectrumData.h"
+
 class Receiver {
   // NOTE: CHECK WHAT IS PUBLIC LATER
   // TODO: Docstrings
 public:
-  // Contstructor
+  // Constructor
   Receiver(uint32_t fc, int agc_bandwidth_nr, int agc_set_point_nr, int gRdB_A,
            int gRdB_B, int lna_state, int dec_factor,
            sdrplay_api_If_kHzT ifType, sdrplay_api_Bw_MHzT bwType,
            bool rf_notch_enable, bool dab_notch_enable);
+
+  // Running Loop Call
+  void run_capture(bool (*break_loop)(void));
+
+  // Startup & Initialise
   void start_api();
   void initialise();
   void stop_api();
-
-  // API control functions
-  void get_device();
-  void set_device_parameters();
-  void cleanup();
 
   // Required params
   uint32_t fc;
@@ -38,6 +40,12 @@ public:
   sdrplay_api_Bw_MHzT bwType;
   bool rf_notch_enable;
   bool dab_notch_enable;
+
+private:
+  // API control functions
+  void get_device();
+  void set_device_parameters();
+  void cleanup();
 
   // Callback functions
   void stream_a_callback(short *xi, short *xq,

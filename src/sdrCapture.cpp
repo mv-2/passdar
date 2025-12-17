@@ -1,4 +1,3 @@
-#include "sdrCapture.h"
 #include <cstdint>
 #include <iostream>
 #include <sdrplay_api.h>
@@ -6,6 +5,9 @@
 #include <sdrplay_api_control.h>
 #include <sdrplay_api_dev.h>
 #include <sdrplay_api_rx_channel.h>
+#include <unistd.h>
+
+#include "sdrCapture.h"
 
 // GLobal Variables
 sdrplay_api_ErrT sdrErr;
@@ -14,6 +16,10 @@ sdrplay_api_DeviceT devs[1]; // Assuming 1 device
 sdrplay_api_DeviceParamsT *deviceParams = NULL;
 sdrplay_api_CallbackFnsT cbFns;
 sdrplay_api_RxChannelParamsT *chParams;
+SpecData *stream_a_data;
+SpecData *stream_b_data;
+short *buffer_a;
+short *buffer_b;
 
 // One (1) device
 const unsigned int MaxDevs = 1;
@@ -233,24 +239,37 @@ void Receiver::set_device_parameters() {
   cbFns.EventCbFn = event_callback_static;
 }
 
+void Receiver::run_capture(bool (*loop_exit)(void)) {
+
+  initialise();
+  sleep(1);
+  while (true) {
+    if (loop_exit()) {
+      break;
+    }
+  }
+  stop_api();
+  return;
+}
+
 // Receiver A data callback
 void Receiver::stream_a_callback(short *xi, short *xq,
                                  sdrplay_api_StreamCbParamsT *params,
                                  unsigned int numSamples, unsigned int reset,
                                  void *cbContext) {
   // Allocate memory for buffer w/ IQ data
-  short int *buffer_A = (short int *)malloc(2 * numSamples * sizeof(short));
+  buffer_a = (short int *)malloc(2 * numSamples * sizeof(short));
 
-  // if (buffer_A == NULL) {
-  //   std::cerr << "Stream A malloc error" << std::endl;
-  //   exit(1);
-  // }
-  //
-  // // Fill buffer
-  // for (unsigned int i = 0; i < numSamples; i++) {
-  //   buffer_A[2 * i] = xi[i];
-  //   buffer_A[2 * i + 1] = xq[i];
-  // }
+  if (buffer_a == NULL) {
+    std::cerr << "Stream A malloc error" << std::endl;
+    exit(1);
+  }
+
+  // Fill buffer
+  for (unsigned int i = 0; i < numSamples; i++) {
+    buffer_a[2 * i] = xi[i];
+    buffer_a[2 * i + 1] = xq[i];
+  }
 
   return;
 }
@@ -261,18 +280,18 @@ void Receiver::stream_b_callback(short *xi, short *xq,
                                  unsigned int numSamples, unsigned int reset,
                                  void *cbContext) {
   // Allocate memory for buffer w/ IQ data
-  short int *buffer_B = (short int *)malloc(2 * numSamples * sizeof(short));
+  buffer_b = (short int *)malloc(2 * numSamples * sizeof(short));
 
-  // if (buffer_B == NULL) {
-  //   std::cerr << "Stream B malloc error" << std::endl;
-  //   exit(1);
-  // }
-  //
-  // // Fill buffer
-  // for (unsigned int i = 0; i < numSamples; i++) {
-  //   buffer_B[2 * i] = xi[i];
-  //   buffer_B[2 * i + 1] = xq[i];
-  // }
+  if (buffer_b == NULL) {
+    std::cerr << "Stream B malloc error" << std::endl;
+    exit(1);
+  }
+
+  // Fill buffer
+  for (unsigned int i = 0; i < numSamples; i++) {
+    buffer_b[2 * i] = xi[i];
+    buffer_b[2 * i + 1] = xq[i];
+  }
 
   return;
 }

@@ -1,3 +1,4 @@
+#include <functional>
 #include <sdrplay_api.h>
 #include <sdrplay_api_tuner.h>
 #include <stdio.h>
@@ -7,7 +8,6 @@
 #include <unistd.h>
 
 #include "sdrCapture.h"
-#include "spectrumData.h"
 
 // Keyboard functions adapted from
 // <https://www.flipcode.com/archives/_kbhit_for_Linux.shtml>
@@ -57,21 +57,15 @@ int main(void) {
   sdrplay_api_Bw_MHzT bwType = sdrplay_api_BW_1_536;
   bool rf_notch_enable = false;
   bool dab_notch_enable = false;
+  // SpecData *stream_a_data = new SpecData(9000);
+  // SpecData *stream_b_data = new SpecData(9000);
 
   // Create receiver
   Receiver receiver = Receiver(fc, agc_bandwidth_nr, agc_set_point_nr, gRdB_A,
                                gRdB_B, lna_state, dec_factor, ifType, bwType,
                                rf_notch_enable, dab_notch_enable);
+
   receiver.start_api();
-  receiver.initialise();
-
-  while (true) {
-    if (break_loop()) {
-      break;
-    }
-    sleep(1);
-  }
-
-  receiver.stop_api();
+  receiver.run_capture(break_loop);
   return 0;
 }
