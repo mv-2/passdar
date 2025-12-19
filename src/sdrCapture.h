@@ -20,7 +20,8 @@ public:
            bool rf_notch_enable, bool dab_notch_enable);
 
   // Running Loop Call
-  void run_capture(bool (*break_loop)(void));
+  void run_capture(SpecData *stream_a_data, SpecData *stream_b_data,
+                   bool (*break_loop)(void));
 
   // Startup & Initialise
   void start_api();
@@ -52,10 +53,12 @@ private:
                          sdrplay_api_StreamCbParamsT *params,
                          unsigned int numSamples, unsigned int reset,
                          void *cbContext);
+
   void stream_b_callback(short *xi, short *xq,
                          sdrplay_api_StreamCbParamsT *params,
                          unsigned int numSamples, unsigned int reset,
                          void *cbContext);
+
   void event_callback(sdrplay_api_EventT eventId,
                       sdrplay_api_TunerSelectT tuner,
                       sdrplay_api_EventParamsT *params, void *cbContext);
@@ -68,6 +71,7 @@ private:
     static_cast<Receiver *>(cbContext)->stream_a_callback(
         xi, xq, params, numSamples, reset, cbContext);
   }
+
   static void stream_b_callback_static(short *xi, short *xq,
                                        sdrplay_api_StreamCbParamsT *params,
                                        unsigned int numSamples,
@@ -75,6 +79,7 @@ private:
     static_cast<Receiver *>(cbContext)->stream_b_callback(
         xi, xq, params, numSamples, reset, cbContext);
   }
+
   static void event_callback_static(sdrplay_api_EventT eventId,
                                     sdrplay_api_TunerSelectT tuner,
                                     sdrplay_api_EventParamsT *params,

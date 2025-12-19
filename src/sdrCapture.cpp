@@ -1,3 +1,5 @@
+#include <complex.h>
+#include <complex>
 #include <cstdint>
 #include <iostream>
 #include <sdrplay_api.h>
@@ -5,6 +7,7 @@
 #include <sdrplay_api_control.h>
 #include <sdrplay_api_dev.h>
 #include <sdrplay_api_rx_channel.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "sdrCapture.h"
@@ -18,8 +21,8 @@ sdrplay_api_CallbackFnsT cbFns;
 sdrplay_api_RxChannelParamsT *chParams;
 SpecData *stream_a_data;
 SpecData *stream_b_data;
-short *buffer_a;
-short *buffer_b;
+// std::complex<double> *buffer_a;
+// std::complex<double> *buffer_b;
 
 // One (1) device
 const unsigned int MaxDevs = 1;
@@ -239,16 +242,23 @@ void Receiver::set_device_parameters() {
   cbFns.EventCbFn = event_callback_static;
 }
 
-void Receiver::run_capture(bool (*loop_exit)(void)) {
+void Receiver::run_capture(SpecData *_stream_a_data, SpecData *_stream_b_data,
+                           bool (*loop_exit)(void)) {
+  stream_a_data = _stream_a_data;
+  stream_b_data = _stream_b_data;
 
+  start_api();
   initialise();
-  sleep(1);
+
   while (true) {
+    sleep(1);
     if (loop_exit()) {
       break;
     }
   }
+
   stop_api();
+
   return;
 }
 
@@ -257,19 +267,20 @@ void Receiver::stream_a_callback(short *xi, short *xq,
                                  sdrplay_api_StreamCbParamsT *params,
                                  unsigned int numSamples, unsigned int reset,
                                  void *cbContext) {
-  // Allocate memory for buffer w/ IQ data
-  buffer_a = (short int *)malloc(2 * numSamples * sizeof(short));
-
-  if (buffer_a == NULL) {
-    std::cerr << "Stream A malloc error" << std::endl;
-    exit(1);
-  }
-
-  // Fill buffer
-  for (unsigned int i = 0; i < numSamples; i++) {
-    buffer_a[2 * i] = xi[i];
-    buffer_a[2 * i + 1] = xq[i];
-  }
+  // // Allocate memory for buffer w/ IQ data
+  // buffer_a =
+  //     (std::complex<double> *)malloc(numSamples *
+  //     sizeof(std::complex<double>));
+  //
+  // if (buffer_a == NULL) {
+  //   std::cerr << "Stream A malloc error" << std::endl;
+  //   exit(1);
+  // }
+  //
+  // // Fill buffer
+  // for (unsigned int i = 0; i < numSamples; i++) {_
+  //   buffer_a[i] = std::complex<double>(xi[i], xq[i]);
+  // }
 
   return;
 }
@@ -279,24 +290,51 @@ void Receiver::stream_b_callback(short *xi, short *xq,
                                  sdrplay_api_StreamCbParamsT *params,
                                  unsigned int numSamples, unsigned int reset,
                                  void *cbContext) {
-  // Allocate memory for buffer w/ IQ data
-  buffer_b = (short int *)malloc(2 * numSamples * sizeof(short));
-
-  if (buffer_b == NULL) {
-    std::cerr << "Stream B malloc error" << std::endl;
-    exit(1);
-  }
+  // allocate memory
+  // stream_b_data->data =
+  //     (std::complex<double> *)malloc(numSamples *
+  //     sizeof(std::complex<double>));
 
   // Fill buffer
-  for (unsigned int i = 0; i < numSamples; i++) {
-    buffer_b[2 * i] = xi[i];
-    buffer_b[2 * i + 1] = xq[i];
+  int diff =
+      stream_b_data->data->size() - stream_b_data->max_length - numSamples;
+  if (diff > 0) {
+    for (unsigned int i = 0; i < numSamples - diff; i++) {
+      stream_b_data->data->push_back(
+          std::complex<double>((double)xi[i], (double)xq[i]));
+    }
+    for (unsigned int i = 0; i < diff; i++) {
+      stream_b_data->data->pop_front();
+      stream_b_data->data->push_back(
+          std::complex<double>((double)xi[i], (double)xq[i]));
+    }
+  } else {
+    for (unsigned int i = 0; i < numSamples; i++) {
+      stream_b_data->data->push_back(
+          std::complex<double>((double)xi[i], (double)xq[i]));
+    }
   }
+
+  // // Allocate memory for buffer w/ IQ data
+  // buffer_b =
+  //     (std::complex<double> *)malloc(numSamples *
+  //     sizeof(std::complex<double>));
+  //
+  // if (buffer_b == NULL) {
+  //   std::cerr << "Stream B malloc error" << std::endl;
+  //   exit(1);
+  // }
+  //
+  // // Fill buffer
+  // for (unsigned int i = 0; i < numSamples; i++) {
+  //   buffer_b[i] = std::complex<double>(xi[i], xq[i]);
+  // }
 
   return;
 }
 
 // Event callback (funnily enough)
+// TODO: Fill based on SDRPLAY example
 void Receiver::event_callback(sdrplay_api_EventT eventId,
                               sdrplay_api_TunerSelectT tuner,
                               sdrplay_api_EventParamsT *params,

@@ -15,7 +15,7 @@ public:
 
   std::vector<double> frequency;
 
-  SpecData(unsigned int max_length);
+  SpecData(int max_length);
 
-  void make_spectrum();
+  void calc_dft();
 };
