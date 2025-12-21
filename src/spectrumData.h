@@ -20,6 +20,8 @@ class SpecData {
 public:
   unsigned int max_length;
 
+  std::mutex mutex_lock;
+
   ReceiverRawIQ *data_iq;
 
   std::vector<std::complex<double>> spectrum;

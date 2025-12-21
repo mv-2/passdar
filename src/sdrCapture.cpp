@@ -274,7 +274,7 @@ void Receiver::stream_b_callback(short *xi, short *xq,
                                  unsigned int numSamples, unsigned int reset,
                                  void *cbContext) {
   // Update data
-  stream_a_data->update_data(xi, xq, numSamples);
+  stream_b_data->update_data(xi, xq, numSamples);
 
   return;
 }

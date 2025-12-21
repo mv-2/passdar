@@ -1,4 +1,6 @@
 #include "spectrumData.h"
+#include <mutex>
+#include <unistd.h>
 
 const std::complex<double> I = std::complex<double>(0, 1.0);
 const std::complex<double> COMPLEX_ZERO = std::complex<double>(0.0, 0.0);
@@ -22,20 +24,25 @@ void SpecData::update_data(short *xi, short *xq, unsigned int numSamples) {
 }
 
 void SpecData::calc_dft() {
+  data_iq->mutex_lock.lock();
   for (int k = 0; k < max_length; k++) {
     spectrum[k] = COMPLEX_ZERO;
     for (int n = 0; n < max_length; n++) {
-      spectrum[k] += data_iq->samples.at((int)n) *
+      spectrum[k] += data_iq->samples.at(n) *
                      std::polar(1.0, -2.0 * M_PI * (double)k * (double)n /
                                          (double)max_length);
     }
   }
+  data_iq->mutex_lock.unlock();
 }
 
 void SpecData::process_data(bool(loop_exit)(void)) {
-  data_iq->mutex_lock.lock();
-  calc_dft();
-  data_iq->mutex_lock.unlock();
+  while (!loop_exit()) {
+    mutex_lock.lock();
+    calc_dft();
+    mutex_lock.unlock();
+    sleep(1);
+  }
 }
 
 ReceiverRawIQ::ReceiverRawIQ(unsigned int _max_length) {
