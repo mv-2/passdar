@@ -45,6 +45,16 @@ void SpecData::process_data(bool(loop_exit)(void)) {
   }
 }
 
+void SpecData::set_plot_datablock(FILE *plot_pipe, std::string id) {
+  mutex_lock.lock();
+  fprintf(plot_pipe, "$data_%s << EOD\n", id.c_str());
+  for (unsigned int i = 0; i < max_length; i++) {
+    fprintf(plot_pipe, "%d %f\n", i, std::abs(spectrum[i]));
+  }
+  mutex_lock.unlock();
+  fprintf(plot_pipe, "EOD\n");
+}
+
 ReceiverRawIQ::ReceiverRawIQ(unsigned int _max_length) {
   max_length = _max_length;
   samples = std::deque<std::complex<double>>(max_length);

@@ -35,4 +35,6 @@ public:
   void update_data(short *xi, short *xq, unsigned int numSamples);
 
   void process_data(bool(loop_exit)(void));
+
+  void set_plot_datablock(FILE *plot_pipe, std::string id);
 };

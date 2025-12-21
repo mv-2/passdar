@@ -1,5 +1,3 @@
-#include <complex>
-#include <fstream>
 #include <sdrplay_api.h>
 #include <sdrplay_api_tuner.h>
 #include <stdio.h>
@@ -10,9 +8,6 @@
 #include <unistd.h>
 
 #include "sdrCapture.h"
-
-const char *FILEPATH_A = "data_A.txt";
-const char *FILEPATH_B = "data_B.txt";
 
 // Keyboard functions adapted from
 // <https://www.flipcode.com/archives/_kbhit_for_Linux.shtml>
@@ -45,58 +40,33 @@ bool break_loop() {
 }
 
 void plot_data(SpecData *stream_a_data, SpecData *stream_b_data,
-               std::string fpath_A, std::string fpath_B,
                bool(loop_exit)(void)) {
   // Initialise plot window
   FILE *plot_pipe = popen("gnuplot -persist", "w");
-  fprintf(plot_pipe, "set multiplot layout 2,1 rowsfirst title \"Spectra\"\n");
-  fprintf(plot_pipe, "set title \"Receiver A\"\n");
-  fprintf(plot_pipe, "set xlabel \"Frequency\"\n");
-  fprintf(plot_pipe, "set ylabel \"Amplitude\"\n");
-
-  fprintf(plot_pipe, "set title \"Receiver B\"\n");
-  fprintf(plot_pipe, "set xlabel \"Frequency\"\n");
-  fprintf(plot_pipe, "set ylabel \"Amplitude\"\n");
-
-  // Plot data file initialisation
-  std::ofstream file_A;
-  std::ofstream file_B;
-  file_A.open(fpath_A);
-  file_B.open(fpath_B);
-  file_A << "0.0 0.0" << std::endl;
-  file_B << "0.0 0.0" << std::endl;
-
-  // initial plot
-  fprintf(plot_pipe, "plot \"%s\"\n", FILEPATH_A);
-  fprintf(plot_pipe, "plot \"%s\"\n", FILEPATH_B);
 
   while (!loop_exit()) {
     sleep(1);
-    file_A.open(fpath_A);
-    file_B.open(fpath_B);
-    // steal and abs stream A abs data
-    stream_a_data->mutex_lock.lock();
-    for (unsigned int i = 0; i < stream_a_data->max_length; i++) {
-      file_A << i << " " << std::abs(stream_a_data->spectrum[i]) << std::endl;
-    }
-    stream_a_data->mutex_lock.unlock();
+    fprintf(plot_pipe, "unset multiplot\n");
+    stream_a_data->set_plot_datablock(plot_pipe, "A");
+    stream_b_data->set_plot_datablock(plot_pipe, "B");
+    fprintf(plot_pipe,
+            "set multiplot layout 2,1 rowsfirst title \"Spectra\"\n");
 
-    // steal and abs stream A abs data
-    stream_b_data->mutex_lock.lock();
-    for (unsigned int i = 0; i < stream_b_data->max_length; i++) {
-      file_B << i << " " << std::abs(stream_b_data->spectrum[i]) << std::endl;
-    }
-    stream_b_data->mutex_lock.unlock();
+    fprintf(plot_pipe, "set title \"Receiver A\"\n");
+    fprintf(plot_pipe, "set xlabel \"Frequency\"\n");
+    fprintf(plot_pipe, "set ylabel \"Amplitude\"\n");
+    fprintf(plot_pipe, "plot $data_A with lines\n");
 
-    fprintf(plot_pipe, "replot");
-    file_A.close();
-    file_B.close();
+    fprintf(plot_pipe, "set title \"Receiver B\"\n");
+    fprintf(plot_pipe, "set xlabel \"Frequency\"\n");
+    fprintf(plot_pipe, "set ylabel \"Amplitude\"\n");
+    fprintf(plot_pipe, "plot $data_B with lines\n");
+    fflush(plot_pipe);
   }
 }
 
 // Driver function for testing
 int main(void) {
-
   // TODO: Make this a config file
   uint32_t fc = 125000;
   uint32_t fs = 220000000;
@@ -127,15 +97,14 @@ int main(void) {
   std::thread processThread_B([&] { stream_b_data->process_data(break_loop); });
 
   // Plotting thread
-  std::thread plotThread([&] {
-    plot_data(stream_a_data, stream_b_data, FILEPATH_A, FILEPATH_B, break_loop);
-  });
+  std::thread plotThread(
+      [&] { plot_data(stream_a_data, stream_b_data, break_loop); });
 
   // Start processes
+  plotThread.join();
   captureThread.join();
   processThread_A.join();
   processThread_B.join();
-  plotThread.join();
 
   return 0;
 }
