@@ -55,11 +55,13 @@ void plot_data(SpecData *stream_a_data, SpecData *stream_b_data,
     fprintf(plot_pipe, "set title \"Receiver A\"\n");
     fprintf(plot_pipe, "set xlabel \"Frequency\"\n");
     fprintf(plot_pipe, "set ylabel \"Amplitude\"\n");
+    fprintf(plot_pipe, "unset key\n");
     fprintf(plot_pipe, "plot $data_A with lines\n");
 
     fprintf(plot_pipe, "set title \"Receiver B\"\n");
     fprintf(plot_pipe, "set xlabel \"Frequency\"\n");
     fprintf(plot_pipe, "set ylabel \"Amplitude\"\n");
+    fprintf(plot_pipe, "unset key\n");
     fprintf(plot_pipe, "plot $data_B with lines\n");
     fflush(plot_pipe);
   }

@@ -279,12 +279,71 @@ void Receiver::stream_b_callback(short *xi, short *xq,
   return;
 }
 
-// Event callback (funnily enough)
-// TODO: Fill based on SDRPLAY example
+// From SDRPLAY example code
 void Receiver::event_callback(sdrplay_api_EventT eventId,
                               sdrplay_api_TunerSelectT tuner,
                               sdrplay_api_EventParamsT *params,
-                              void *cbContext) {}
+                              void *cbContext) {
+  switch (eventId) {
+  case sdrplay_api_GainChange:
+    printf("sdrplay_api_EventCb: %s, tuner=%s gRdB=%d lnaGRdB=%d "
+           "systemGain=%.2f\n",
+           "sdrplay_api_GainChange",
+           (tuner == sdrplay_api_Tuner_A) ? "sdrplay_api_Tuner_A"
+                                          : "sdrplay_api_Tuner_B",
+           params->gainParams.gRdB, params->gainParams.lnaGRdB,
+           params->gainParams.currGain);
+  case sdrplay_api_PowerOverloadChange:
+    printf("sdrplay_api_PowerOverloadChange: tuner=%s "
+           "powerOverloadChangeType=%s\n",
+           (tuner == sdrplay_api_Tuner_A) ? "sdrplay_api_Tuner_A"
+                                          : "sdrplay_api_Tuner_B",
+           (params->powerOverloadParams.powerOverloadChangeType ==
+            sdrplay_api_Overload_Detected)
+               ? "sdrplay_api_Overload_Detected"
+               : "sdrplay_api_Overload_Corrected");
+    // Send update message to acknowledge power overload message received
+    sdrplay_api_Update(chosenDevice->dev, tuner,
+                       sdrplay_api_Update_Ctrl_OverloadMsgAck,
+                       sdrplay_api_Update_Ext1_None);
+    break;
+  case sdrplay_api_RspDuoModeChange:
+    printf(
+        "sdrplay_api_EventCb: %s, tuner=%s modeChangeType=%s\n",
+        "sdrplay_api_RspDuoModeChange",
+        (tuner == sdrplay_api_Tuner_A) ? "sdrplay_api_Tuner_A"
+                                       : "sdrplay_api_Tuner_B",
+        (params->rspDuoModeParams.modeChangeType ==
+         sdrplay_api_MasterInitialised)
+            ? "sdrplay_api_MasterInitialised"
+        : (params->rspDuoModeParams.modeChangeType == sdrplay_api_SlaveAttached)
+            ? "sdrplay_api_SlaveAttached"
+        : (params->rspDuoModeParams.modeChangeType == sdrplay_api_SlaveDetached)
+            ? "sdrplay_api_SlaveDetached"
+        : (params->rspDuoModeParams.modeChangeType ==
+           sdrplay_api_SlaveInitialised)
+            ? "sdrplay_api_SlaveInitialised"
+        : (params->rspDuoModeParams.modeChangeType ==
+           sdrplay_api_SlaveUninitialised)
+            ? "sdrplay_api_SlaveUninitialised"
+        : (params->rspDuoModeParams.modeChangeType ==
+           sdrplay_api_MasterDllDisappeared)
+            ? "sdrplay_api_MasterDllDisappeared"
+        : (params->rspDuoModeParams.modeChangeType ==
+           sdrplay_api_SlaveDllDisappeared)
+            ? "sdrplay_api_SlaveDllDisappeared"
+            : "unknown type");
+    break;
+
+  case sdrplay_api_DeviceRemoved:
+    printf("sdrplay_api_EventCb: %s\n", "sdrplay_api_DeviceRemoved");
+    break;
+
+  case sdrplay_api_DeviceFailure:
+    printf("sdrplay_api_EventCb: %s\n", "sdrplay_api_DeviceFailure");
+    break;
+  }
+}
 
 // Cleanup function.
 // NOTE: May not be necessary but leaving in in case of additional cleanup
