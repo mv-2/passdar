@@ -1,5 +1,4 @@
 #include <complex.h>
-#include <complex>
 #include <cstdint>
 #include <iostream>
 #include <sdrplay_api.h>
@@ -21,8 +20,6 @@ sdrplay_api_CallbackFnsT cbFns;
 sdrplay_api_RxChannelParamsT *chParams;
 SpecData *stream_a_data;
 SpecData *stream_b_data;
-// std::complex<double> *buffer_a;
-// std::complex<double> *buffer_b;
 
 // One (1) device
 const unsigned int MaxDevs = 1;
@@ -250,11 +247,8 @@ void Receiver::run_capture(SpecData *_stream_a_data, SpecData *_stream_b_data,
   start_api();
   initialise();
 
-  while (true) {
+  while (!loop_exit()) {
     sleep(1);
-    if (loop_exit()) {
-      break;
-    }
   }
 
   stop_api();
@@ -267,20 +261,9 @@ void Receiver::stream_a_callback(short *xi, short *xq,
                                  sdrplay_api_StreamCbParamsT *params,
                                  unsigned int numSamples, unsigned int reset,
                                  void *cbContext) {
-  // // Allocate memory for buffer w/ IQ data
-  // buffer_a =
-  //     (std::complex<double> *)malloc(numSamples *
-  //     sizeof(std::complex<double>));
-  //
-  // if (buffer_a == NULL) {
-  //   std::cerr << "Stream A malloc error" << std::endl;
-  //   exit(1);
-  // }
-  //
-  // // Fill buffer
-  // for (unsigned int i = 0; i < numSamples; i++) {_
-  //   buffer_a[i] = std::complex<double>(xi[i], xq[i]);
-  // }
+
+  // Update data
+  stream_a_data->update_data(xi, xq, numSamples);
 
   return;
 }
@@ -290,45 +273,8 @@ void Receiver::stream_b_callback(short *xi, short *xq,
                                  sdrplay_api_StreamCbParamsT *params,
                                  unsigned int numSamples, unsigned int reset,
                                  void *cbContext) {
-  // allocate memory
-  // stream_b_data->data =
-  //     (std::complex<double> *)malloc(numSamples *
-  //     sizeof(std::complex<double>));
-
-  // Fill buffer
-  int diff =
-      stream_b_data->data->size() - stream_b_data->max_length - numSamples;
-  if (diff > 0) {
-    for (unsigned int i = 0; i < numSamples - diff; i++) {
-      stream_b_data->data->push_back(
-          std::complex<double>((double)xi[i], (double)xq[i]));
-    }
-    for (unsigned int i = 0; i < diff; i++) {
-      stream_b_data->data->pop_front();
-      stream_b_data->data->push_back(
-          std::complex<double>((double)xi[i], (double)xq[i]));
-    }
-  } else {
-    for (unsigned int i = 0; i < numSamples; i++) {
-      stream_b_data->data->push_back(
-          std::complex<double>((double)xi[i], (double)xq[i]));
-    }
-  }
-
-  // // Allocate memory for buffer w/ IQ data
-  // buffer_b =
-  //     (std::complex<double> *)malloc(numSamples *
-  //     sizeof(std::complex<double>));
-  //
-  // if (buffer_b == NULL) {
-  //   std::cerr << "Stream B malloc error" << std::endl;
-  //   exit(1);
-  // }
-  //
-  // // Fill buffer
-  // for (unsigned int i = 0; i < numSamples; i++) {
-  //   buffer_b[i] = std::complex<double>(xi[i], xq[i]);
-  // }
+  // Update data
+  stream_a_data->update_data(xi, xq, numSamples);
 
   return;
 }

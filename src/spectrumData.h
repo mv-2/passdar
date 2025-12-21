@@ -18,4 +18,6 @@ public:
   SpecData(int max_length);
 
   void calc_dft();
+
+  void update_data(short *xi, short *xq, unsigned int numSamples);
 };

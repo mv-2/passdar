@@ -44,17 +44,17 @@ void process_loop(SpecData *_stream_a_data, SpecData *_stream_b_data,
                   bool(loop_exit)(void)) {
   SpecData *stream_a_data = _stream_a_data;
   SpecData *stream_b_data = _stream_b_data;
-  while (true) {
-    if (loop_exit()) {
-      break;
-    }
-    std::cout << 1 << std::endl;
+  while (!loop_exit()) {
+    // TEST: Check if dft calculations can be parallelised
+    // Stream A DFT
     stream_a_data->mutex_lock.lock();
-    stream_b_data->mutex_lock.lock();
-    // stream_a_data->calc_dft();
-    // stream_b_data->calc_dft();
-    stream_a_data->mutex_lock.unlock();
+    stream_a_data->calc_dft();
     stream_b_data->mutex_lock.unlock();
+
+    // Stream B DFT
+    stream_b_data->mutex_lock.lock();
+    stream_b_data->calc_dft();
+    stream_a_data->mutex_lock.unlock();
     sleep(1);
   }
 }
@@ -77,8 +77,8 @@ int main(void) {
   sdrplay_api_Bw_MHzT bwType = sdrplay_api_BW_1_536;
   bool rf_notch_enable = false;
   bool dab_notch_enable = false;
-  SpecData *stream_a_data = new SpecData(2048);
-  SpecData *stream_b_data = new SpecData(2048);
+  SpecData *stream_a_data = new SpecData(1000);
+  SpecData *stream_b_data = new SpecData(1000);
 
   // Create receiver
   Receiver *receiver = new Receiver(
