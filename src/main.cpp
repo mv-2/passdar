@@ -1,4 +1,3 @@
-#include <iostream>
 #include <sdrplay_api.h>
 #include <sdrplay_api_tuner.h>
 #include <stdio.h>
@@ -40,29 +39,8 @@ bool break_loop() {
   return false;
 }
 
-void process_loop(SpecData *_stream_a_data, SpecData *_stream_b_data,
-                  bool(loop_exit)(void)) {
-  SpecData *stream_a_data = _stream_a_data;
-  SpecData *stream_b_data = _stream_b_data;
-  while (!loop_exit()) {
-    // TEST: Check if dft calculations can be parallelised
-    // Stream A DFT
-    stream_a_data->mutex_lock.lock();
-    stream_a_data->calc_dft();
-    stream_b_data->mutex_lock.unlock();
-
-    // Stream B DFT
-    stream_b_data->mutex_lock.lock();
-    stream_b_data->calc_dft();
-    stream_a_data->mutex_lock.unlock();
-    sleep(1);
-  }
-}
-
 // Driver function for testing
 int main(void) {
-  // vars
-  char c;
 
   // TODO: Make this a config file
   uint32_t fc = 125000;
@@ -89,12 +67,14 @@ int main(void) {
   std::thread captureThread(
       [&] { receiver->run_capture(stream_a_data, stream_b_data, break_loop); });
 
-  // Processing thread
-  std::thread processThread(
-      [&] { process_loop(stream_a_data, stream_b_data, break_loop); });
+  // Processing threads
+  std::thread processThread_A([&] { stream_a_data->process_data(break_loop); });
+  std::thread processThread_B([&] { stream_a_data->process_data(break_loop); });
 
+  // Start processes
   captureThread.join();
-  processThread.join();
+  processThread_A.join();
+  processThread_B.join();
 
   return 0;
 }

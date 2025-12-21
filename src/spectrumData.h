@@ -3,13 +3,24 @@
 #include <mutex>
 #include <vector>
 
+class ReceiverRawIQ {
+public:
+  std::deque<std::complex<double>> samples;
+
+  std::mutex mutex_lock;
+
+  unsigned int max_length;
+
+  ReceiverRawIQ(unsigned int max_length);
+
+  void update_data(short *xi, short *xq, unsigned int numSamples);
+};
+
 class SpecData {
 public:
   unsigned int max_length;
 
-  std::mutex mutex_lock;
-
-  std::deque<std::complex<double>> *data;
+  ReceiverRawIQ *data_iq;
 
   std::vector<std::complex<double>> spectrum;
 
@@ -20,4 +31,6 @@ public:
   void calc_dft();
 
   void update_data(short *xi, short *xq, unsigned int numSamples);
+
+  void process_data(bool(loop_exit)(void));
 };
