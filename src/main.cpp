@@ -1,3 +1,5 @@
+#include <atomic>
+#include <cstdlib>
 #include <iostream>
 #include <jsoncpp/json/json.h>
 #include <sdrplay_api.h>
@@ -44,6 +46,9 @@ bool break_loop() {
 
 // Driver function for testing
 int main(int argc, char *argv[]) {
+  // Loop flag
+  std::atomic<bool> exit_flag(false);
+
   // Get config file location
   if (argc < 2) {
     std::cerr << "No config file name detected" << std::endl;
@@ -59,22 +64,30 @@ int main(int argc, char *argv[]) {
   SpecData *stream_b_data = new SpecData(cfg["processing"]);
   RadarData *radar_data = new RadarData(stream_a_data, stream_b_data);
 
-  // Start Capture Thread
+  // Capture Thread
   std::thread captureThread(
-      [&] { receiver->run_capture(stream_a_data, stream_b_data, break_loop); });
+      [&] { receiver->run_capture(stream_a_data, stream_b_data, &exit_flag); });
 
   // Processing threads
-  std::thread processThread_A([&] { stream_a_data->process_data(break_loop); });
-  std::thread processThread_B([&] { stream_b_data->process_data(break_loop); });
+  std::thread processThread_A([&] { stream_a_data->process_data(&exit_flag); });
+  std::thread processThread_B([&] { stream_b_data->process_data(&exit_flag); });
 
   // Plotting thread
-  std::thread plotThread([&] { radar_data->plot_spectra(break_loop); });
+  std::thread plotThread([&] { radar_data->plot_spectra(&exit_flag); });
 
-  // Start processes
+  // User exit signal thread
+  while (!break_loop()) {
+    sleep(1);
+  }
+
+  // set flag to true when loop break condition met
+  exit_flag.store(true);
+
+  // Join threads to end processes. Changing order results in seg fault
   plotThread.join();
-  captureThread.join();
   processThread_A.join();
   processThread_B.join();
+  captureThread.join();
 
   return 0;
 }

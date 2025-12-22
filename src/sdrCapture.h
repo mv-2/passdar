@@ -27,7 +27,7 @@ public:
    * to break looping.
    */
   void run_capture(SpecData *stream_a_data, SpecData *stream_b_data,
-                   bool (*break_loop)(void));
+                   std::atomic<bool> *exit_flag);
 
   /*
    * Open API, validate version and set device parameters

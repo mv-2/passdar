@@ -65,7 +65,7 @@ public:
    * @param loop_exit Function with no arguments which returns true on condition
    * to break looping.
    */
-  void process_data(bool(loop_exit)(void));
+  void process_data(std::atomic<bool> *exit_flag);
 
   /*
    * Set datablock of name $data_<id> in gnuplot process.
@@ -125,5 +125,5 @@ public:
    * @param loop_exit Function with no arguments returning true when exit
    * condition for loop is met
    */
-  void plot_spectra(bool(loop_exit)(void));
+  void plot_spectra(std::atomic<bool> *exit_flag);
 };

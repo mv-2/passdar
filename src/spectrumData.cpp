@@ -1,4 +1,5 @@
 #include "spectrumData.h"
+#include <atomic>
 #include <fftw3.h>
 #include <mutex>
 #include <unistd.h>
@@ -41,8 +42,8 @@ void SpecData::calc_dft() {
   fftw_execute(fft_plan);
 }
 
-void SpecData::process_data(bool(loop_exit)(void)) {
-  while (!loop_exit()) {
+void SpecData::process_data(std::atomic<bool> *exit_flag) {
+  while (!exit_flag->load()) {
     // Lock mute for SpecData so plotting thread does not read spectrum during
     // FFTW process
     mutex_lock.lock();
@@ -86,12 +87,12 @@ RadarData::RadarData(SpecData *_stream_a_data, SpecData *_stream_b_data) {
   stream_b_data = _stream_b_data;
 }
 
-void RadarData::plot_spectra(bool(loop_exit)(void)) {
+void RadarData::plot_spectra(std::atomic<bool> *exit_flag) {
   // Initialise plot window
   FILE *plot_pipe = popen("gnuplot -persist", "w");
 
   // Reset data block and replot each second
-  while (!loop_exit()) {
+  while (!(exit_flag->load(std::memory_order_relaxed))) {
     sleep(1);
     // Set datablock values
     stream_a_data->set_plot_datablock(plot_pipe, 1);

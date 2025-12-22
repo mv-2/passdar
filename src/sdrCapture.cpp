@@ -1,3 +1,4 @@
+#include <atomic>
 #include <complex.h>
 #include <iostream>
 #include <sdrplay_api.h>
@@ -164,6 +165,7 @@ void Receiver::get_device() {
   return;
 }
 
+// TODO: Add additional parameters to this via config file
 void Receiver::set_device_parameters() {
   // Get existing parameters
   if ((sdrErr =
@@ -239,7 +241,7 @@ void Receiver::set_device_parameters() {
 }
 
 void Receiver::run_capture(SpecData *_stream_a_data, SpecData *_stream_b_data,
-                           bool (*loop_exit)(void)) {
+                           std::atomic<bool> *exit_flag) {
   // assign SpecData pointers
   stream_a_data = _stream_a_data;
   stream_b_data = _stream_b_data;
@@ -249,7 +251,7 @@ void Receiver::run_capture(SpecData *_stream_a_data, SpecData *_stream_b_data,
   initialise();
 
   // Check for end signal at 1Hz
-  while (!loop_exit()) {
+  while (!exit_flag->load()) {
     sleep(1);
   }
 
@@ -263,7 +265,6 @@ void Receiver::stream_a_callback(short *xi, short *xq,
                                  sdrplay_api_StreamCbParamsT *params,
                                  unsigned int numSamples, unsigned int reset,
                                  void *cbContext) {
-
   // Update data
   stream_a_data->update_data(xi, xq, numSamples);
 
