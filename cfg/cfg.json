@@ -6,9 +6,9 @@
     "gRdB_A": 20,
     "gRdB_B": 20,
     "lna_state": 0,
-    "dec_factor": 1,
-    "ifType": "sdrplay_api_IF_0_450",
-    "bwType": "sdrplay_api_BW_1_536",
+    "dec_factor": 16,
+    "ifType": "sdrplay_api_IF_Zero",
+    "bwType": "sdrplay_api_BW_8_000",
     "rf_notch_enable": false,
     "dab_notch_enable": false
   },

@@ -42,43 +42,6 @@ bool break_loop() {
   return false;
 }
 
-// Creates persistant gnuplot window with live updating spectrum
-void plot_data(SpecData *stream_a_data, SpecData *stream_b_data,
-               bool(loop_exit)(void)) {
-  // Initialise plot window
-  FILE *plot_pipe = popen("gnuplot -persist", "w");
-
-  // Reset data block and replot each second
-  while (!loop_exit()) {
-    sleep(1);
-    // Set datablock values
-    stream_a_data->set_plot_datablock(plot_pipe, 1);
-    stream_b_data->set_plot_datablock(plot_pipe, 2);
-
-    // Create multiplot layout
-    fprintf(plot_pipe,
-            "set multiplot layout 2,1 rowsfirst title \"Spectra\"\n");
-
-    // Receiver A plot
-    fprintf(plot_pipe, "set title \"Receiver A\"\n");
-    fprintf(plot_pipe, "set xlabel \"Frequency\"\n");
-    fprintf(plot_pipe, "set ylabel \"Amplitude\"\n");
-    fprintf(plot_pipe, "unset key\n");
-    fprintf(plot_pipe, "plot $data_1 with lines\n");
-
-    // Receiver B plot
-    fprintf(plot_pipe, "set title \"Receiver B\"\n");
-    fprintf(plot_pipe, "set xlabel \"Frequency\"\n");
-    fprintf(plot_pipe, "set ylabel \"Amplitude\"\n");
-    fprintf(plot_pipe, "unset key\n");
-    fprintf(plot_pipe, "plot $data_2 with lines\n");
-
-    // Back to standard mode and flush buffer
-    fprintf(plot_pipe, "unset multiplot\n");
-    fflush(plot_pipe);
-  }
-}
-
 // Driver function for testing
 int main(int argc, char *argv[]) {
   // Get config file location
@@ -90,10 +53,11 @@ int main(int argc, char *argv[]) {
   // Load configs as JSON values
   Json::Value cfg = cfgInterface::load_config(argv[1]);
 
-  // Create receiver
+  // Create receiver and data objects
   Receiver *receiver = new Receiver(cfg["receiver"]);
   SpecData *stream_a_data = new SpecData(cfg["processing"]);
   SpecData *stream_b_data = new SpecData(cfg["processing"]);
+  RadarData *radar_data = new RadarData(stream_a_data, stream_b_data);
 
   // Start Capture Thread
   std::thread captureThread(
@@ -104,8 +68,7 @@ int main(int argc, char *argv[]) {
   std::thread processThread_B([&] { stream_b_data->process_data(break_loop); });
 
   // Plotting thread
-  std::thread plotThread(
-      [&] { plot_data(stream_a_data, stream_b_data, break_loop); });
+  std::thread plotThread([&] { radar_data->plot_spectra(break_loop); });
 
   // Start processes
   plotThread.join();

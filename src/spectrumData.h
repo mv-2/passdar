@@ -35,6 +35,9 @@ public:
   void update_data(short *xi, short *xq, unsigned int numSamples);
 };
 
+/*
+ * Stores spectrum data
+ */
 class SpecData {
 public:
   // maximum number of samples stored by object
@@ -95,4 +98,32 @@ private:
    * spectrum field.
    */
   void calc_dft();
+};
+
+/*
+ * Stores data of both streams required for RADAR processing
+ */
+class RadarData {
+public:
+  // RSPDuo stream A
+  SpecData *stream_a_data;
+
+  // RSPDuo stream B
+  SpecData *stream_b_data;
+
+  /*
+   * Constructor for RadarData class
+   *
+   * @param stream_a_data Pointer to SpecData object for stream A
+   * @param stream_B_data Pointer to SpecData object for stream B
+   */
+  RadarData(SpecData *stream_a_data, SpecData *stream_b_data);
+
+  /*
+   * Plots live spectra comparison of stream A and B using GNUPLOT
+   *
+   * @param loop_exit Function with no arguments returning true when exit
+   * condition for loop is met
+   */
+  void plot_spectra(bool(loop_exit)(void));
 };

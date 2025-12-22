@@ -2,7 +2,7 @@
 CC = clang++
 
 # Compiler flags
-CFLAGS = -O3
+CFLAGS = -O3 -pedantic
 
 # target naming
 TARGET = passdar

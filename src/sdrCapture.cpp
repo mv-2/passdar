@@ -199,8 +199,10 @@ void Receiver::set_device_parameters() {
   // Tuner frequency (??)
   chParams->tunerParams.rfFreq.rfHz = fc;
 
+  // Decimation
+  chParams->ctrlParams.decimation.decimationFactor = dec_factor;
+
   // AGC
-  // TODO: INVESTIGATE
   chParams->ctrlParams.agc.enable = sdrplay_api_AGC_DISABLE;
   if (agc_bandwidth_nr == 5) {
     chParams->ctrlParams.agc.enable = sdrplay_api_AGC_5HZ;
