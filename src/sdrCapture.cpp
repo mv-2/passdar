@@ -241,22 +241,25 @@ void Receiver::set_device_parameters() {
 
 void Receiver::run_capture(SpecData *_stream_a_data, SpecData *_stream_b_data,
                            bool (*loop_exit)(void)) {
+  // assign SpecData pointers
   stream_a_data = _stream_a_data;
   stream_b_data = _stream_b_data;
 
+  // Start Device API processes
   start_api();
   initialise();
 
+  // Check for end signal at 1Hz
   while (!loop_exit()) {
     sleep(1);
   }
 
+  // Stop and cleanup
   stop_api();
 
   return;
 }
 
-// Receiver A data callback
 void Receiver::stream_a_callback(short *xi, short *xq,
                                  sdrplay_api_StreamCbParamsT *params,
                                  unsigned int numSamples, unsigned int reset,
@@ -268,7 +271,6 @@ void Receiver::stream_a_callback(short *xi, short *xq,
   return;
 }
 
-// Receiver B data callback
 void Receiver::stream_b_callback(short *xi, short *xq,
                                  sdrplay_api_StreamCbParamsT *params,
                                  unsigned int numSamples, unsigned int reset,
@@ -279,11 +281,11 @@ void Receiver::stream_b_callback(short *xi, short *xq,
   return;
 }
 
-// From SDRPLAY example code
 void Receiver::event_callback(sdrplay_api_EventT eventId,
                               sdrplay_api_TunerSelectT tuner,
                               sdrplay_api_EventParamsT *params,
                               void *cbContext) {
+  // Function from SDRplay provided example
   switch (eventId) {
   case sdrplay_api_GainChange:
     printf("sdrplay_api_EventCb: %s, tuner=%s gRdB=%d lnaGRdB=%d "
@@ -345,7 +347,6 @@ void Receiver::event_callback(sdrplay_api_EventT eventId,
   }
 }
 
-// Cleanup function.
 // NOTE: May not be necessary but leaving in in case of additional cleanup
 // variables later
 void Receiver::cleanup() {

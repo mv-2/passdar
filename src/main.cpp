@@ -39,43 +39,56 @@ bool break_loop() {
   return false;
 }
 
+// Creates persistant gnuplot window with live updating spectrum
 void plot_data(SpecData *stream_a_data, SpecData *stream_b_data,
                bool(loop_exit)(void)) {
   // Initialise plot window
   FILE *plot_pipe = popen("gnuplot -persist", "w");
 
+  // Reset data block and replot each second
   while (!loop_exit()) {
     sleep(1);
-    fprintf(plot_pipe, "unset multiplot\n");
-    stream_a_data->set_plot_datablock(plot_pipe, "A");
-    stream_b_data->set_plot_datablock(plot_pipe, "B");
+    // Set datablock values
+    stream_a_data->set_plot_datablock(plot_pipe, 1);
+    stream_b_data->set_plot_datablock(plot_pipe, 2);
+
+    // Create multiplot layout
     fprintf(plot_pipe,
             "set multiplot layout 2,1 rowsfirst title \"Spectra\"\n");
 
+    // Receiver A plot
     fprintf(plot_pipe, "set title \"Receiver A\"\n");
     fprintf(plot_pipe, "set xlabel \"Frequency\"\n");
     fprintf(plot_pipe, "set ylabel \"Amplitude\"\n");
     fprintf(plot_pipe, "unset key\n");
-    fprintf(plot_pipe, "plot $data_A with lines\n");
+    fprintf(plot_pipe, "plot $data_1 with lines\n");
 
+    // Receiver B plot
     fprintf(plot_pipe, "set title \"Receiver B\"\n");
     fprintf(plot_pipe, "set xlabel \"Frequency\"\n");
     fprintf(plot_pipe, "set ylabel \"Amplitude\"\n");
     fprintf(plot_pipe, "unset key\n");
-    fprintf(plot_pipe, "plot $data_B with lines\n");
+    fprintf(plot_pipe, "plot $data_2 with lines\n");
+
+    // Back to standard mode and flush buffer
+    fprintf(plot_pipe, "unset multiplot\n");
     fflush(plot_pipe);
   }
+
+  // Close plot and quit
+  fprintf(plot_pipe, "quit\n");
+  fflush(plot_pipe);
 }
 
 // Driver function for testing
 int main(void) {
   // TODO: Make this a config file
-  uint32_t fc = 125000;
+  uint32_t fc = 200000000;
   uint32_t fs = 220000000;
   int agc_bandwidth_nr = 0;
   int agc_set_point_nr = 0;
-  int gRdB_A = 40;
-  int gRdB_B = 40;
+  int gRdB_A = 20;
+  int gRdB_B = 20;
   int lna_state = 0;
   int dec_factor = 1;
   sdrplay_api_If_kHzT ifType = sdrplay_api_IF_0_450;
