@@ -23,8 +23,8 @@ public:
    *
    * @param stream_a_data Pointer to SpecData object for stream A.
    * @param stream_b_data Pointer to SpecData object for stream B.
-   * @param loop_exit Function with no arguments which returns true on condition
-   * to break looping.
+   * @param exit_flag Pointer to atomic<bool> flag denoting required end of
+   * process.
    */
   void run_capture(SpecData *stream_a_data, SpecData *stream_b_data,
                    std::atomic<bool> *exit_flag);

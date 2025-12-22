@@ -62,8 +62,8 @@ public:
   /*
    * Processing function loop.
    *
-   * @param loop_exit Function with no arguments which returns true on condition
-   * to break looping.
+   * @param exit_flag Pointer to atomic<bool> flag denoting user request to end
+   * program.
    */
   void process_data(std::atomic<bool> *exit_flag);
 
@@ -122,8 +122,8 @@ public:
   /*
    * Plots live spectra comparison of stream A and B using GNUPLOT
    *
-   * @param loop_exit Function with no arguments returning true when exit
-   * condition for loop is met
+   * @param exit_flag Pointer to atomic<bool> flag set to true when user ends
+   * program.
    */
   void plot_spectra(std::atomic<bool> *exit_flag);
 };

@@ -75,7 +75,7 @@ int main(int argc, char *argv[]) {
   // Plotting thread
   std::thread plotThread([&] { radar_data->plot_spectra(&exit_flag); });
 
-  // User exit signal thread
+  // User exit signal from main thread
   while (!break_loop()) {
     sleep(1);
   }
