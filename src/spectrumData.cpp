@@ -6,9 +6,8 @@
 const std::complex<double> I = std::complex<double>(0, 1.0);
 const std::complex<double> COMPLEX_ZERO = std::complex<double>(0.0, 0.0);
 
-// TODO: Figure out what I'm doing here. Maybe NFFT as arg?
-SpecData::SpecData(int _max_length) {
-  max_length = _max_length;
+SpecData::SpecData(Json::Value processCfg) {
+  max_length = processCfg["n_samples"].asUInt();
   data_iq = new ReceiverRawIQ(max_length);
   spectrum = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * max_length);
   sample_buffer =

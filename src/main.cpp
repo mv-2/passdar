@@ -1,3 +1,5 @@
+#include <iostream>
+#include <jsoncpp/json/json.h>
 #include <sdrplay_api.h>
 #include <sdrplay_api_tuner.h>
 #include <stdio.h>
@@ -7,6 +9,7 @@
 #include <thread>
 #include <unistd.h>
 
+#include "cfgInterface.h"
 #include "sdrCapture.h"
 
 // Keyboard functions adapted from
@@ -74,34 +77,23 @@ void plot_data(SpecData *stream_a_data, SpecData *stream_b_data,
     fprintf(plot_pipe, "unset multiplot\n");
     fflush(plot_pipe);
   }
-
-  // Close plot and quit
-  fprintf(plot_pipe, "quit\n");
-  fflush(plot_pipe);
 }
 
 // Driver function for testing
-int main(void) {
-  // TODO: Make this a config file
-  uint32_t fc = 200000000;
-  uint32_t fs = 220000000;
-  int agc_bandwidth_nr = 0;
-  int agc_set_point_nr = 0;
-  int gRdB_A = 20;
-  int gRdB_B = 20;
-  int lna_state = 0;
-  int dec_factor = 1;
-  sdrplay_api_If_kHzT ifType = sdrplay_api_IF_0_450;
-  sdrplay_api_Bw_MHzT bwType = sdrplay_api_BW_1_536;
-  bool rf_notch_enable = false;
-  bool dab_notch_enable = false;
-  SpecData *stream_a_data = new SpecData(2000);
-  SpecData *stream_b_data = new SpecData(2000);
+int main(int argc, char *argv[]) {
+  // Get config file location
+  if (argc < 2) {
+    std::cerr << "No config file name detected" << std::endl;
+    return 0;
+  }
+
+  // Load configs as JSON values
+  Json::Value cfg = cfgInterface::load_config(argv[1]);
 
   // Create receiver
-  Receiver *receiver = new Receiver(
-      fc, agc_bandwidth_nr, agc_set_point_nr, gRdB_A, gRdB_B, lna_state,
-      dec_factor, ifType, bwType, rf_notch_enable, dab_notch_enable);
+  Receiver *receiver = new Receiver(cfg["receiver"]);
+  SpecData *stream_a_data = new SpecData(cfg["processing"]);
+  SpecData *stream_b_data = new SpecData(cfg["processing"]);
 
   // Start Capture Thread
   std::thread captureThread(

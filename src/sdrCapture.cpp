@@ -1,14 +1,14 @@
 #include <complex.h>
-#include <cstdint>
 #include <iostream>
 #include <sdrplay_api.h>
 #include <sdrplay_api_callback.h>
 #include <sdrplay_api_control.h>
 #include <sdrplay_api_dev.h>
 #include <sdrplay_api_rx_channel.h>
-#include <time.h>
+#include <sdrplay_api_tuner.h>
 #include <unistd.h>
 
+#include "cfgInterface.h"
 #include "sdrCapture.h"
 
 // GLobal Variables
@@ -24,22 +24,19 @@ SpecData *stream_b_data;
 // One (1) device
 const unsigned int MaxDevs = 1;
 
-// TODO: Find if this is sane
-Receiver::Receiver(uint32_t _fc, int _agc_bandwidth_nr, int _agc_set_point_nr,
-                   int _gRdB_A, int _gRdB_B, int _lna_state, int _dec_factor,
-                   sdrplay_api_If_kHzT _ifType, sdrplay_api_Bw_MHzT _bwType,
-                   bool _rf_notch_enable, bool _dab_notch_enable) {
-  fc = _fc;
-  agc_bandwidth_nr = _agc_bandwidth_nr;
-  agc_set_point_nr = _agc_set_point_nr;
-  gRdB_A = _gRdB_A;
-  gRdB_B = _gRdB_B;
-  lna_state = _lna_state;
-  dec_factor = _dec_factor;
-  ifType = _ifType;
-  bwType = _bwType;
-  rf_notch_enable = _rf_notch_enable;
-  dab_notch_enable = _dab_notch_enable;
+Receiver::Receiver(Json::Value receiverCfg) {
+  // Assign Receiver parameters
+  fc = receiverCfg["fc"].asUInt();
+  agc_bandwidth_nr = receiverCfg["agc_bandwidth_nr"].asInt();
+  agc_set_point_nr = receiverCfg["agc_set_point_nr"].asInt();
+  gRdB_A = receiverCfg["gRdB_A"].asInt();
+  gRdB_B = receiverCfg["gRdB_B"].asInt();
+  lna_state = receiverCfg["lna_state"].asInt();
+  dec_factor = receiverCfg["dec_factor"].asInt();
+  rf_notch_enable = receiverCfg["rf_notch_enable"].asBool();
+  dab_notch_enable = receiverCfg["dab_notch_enable"].asBool();
+  ifType = cfgInterface::ifType_map.at(receiverCfg["ifType"].asString());
+  bwType = cfgInterface::bwType_map.at(receiverCfg["bwType"].asString());
 }
 
 void Receiver::start_api() {

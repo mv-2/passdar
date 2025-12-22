@@ -2,6 +2,7 @@
 #define SDRCAPTURE_H
 
 #include <cstdint>
+#include <jsoncpp/json/json.h>
 #include <sdrplay_api.h>
 #include <sdrplay_api_callback.h>
 #include <sdrplay_api_tuner.h>
@@ -13,23 +14,9 @@ class Receiver {
 public:
   /* Receiver class constructor
    *
-   * @param fc centre frequency for tuner
-   * @param agc_bandwidth_nr AGC bandwidth in Hz. Must line up with SDRPlay API
-   * allowed values. 0 to disable.
-   * @param agc_set_point_nr AGC set point. Set to max(agc_set_point_nr, 0)
-   * @param gRdB_A Channel A gain reduction.
-   * @param gRdB_B Channel B gain reduction.
-   * @param lna_state LNA state as per SDRplay API specification
-   * @param dec_factor Decimation/downsampling factor
-   * @param ifType IF type as per sdrplay_api_If_kHzT allowed values
-   * @param bwType BW type as per sdrplay_api_Bw_MHzT allowed values
-   * @param rf_notch_enable RF notch filter flag
-   * @param dab_notch_enable DAB notch filter flag
+   * @param cfg_path file path to json config file
    */
-  Receiver(uint32_t fc, int agc_bandwidth_nr, int agc_set_point_nr, int gRdB_A,
-           int gRdB_B, int lna_state, int dec_factor,
-           sdrplay_api_If_kHzT ifType, sdrplay_api_Bw_MHzT bwType,
-           bool rf_notch_enable, bool dab_notch_enable);
+  Receiver(Json::Value receiverCfg);
 
   /*
    * Data capture looping function.

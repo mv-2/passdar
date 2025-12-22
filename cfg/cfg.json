@@ -1,0 +1,18 @@
+{
+  "receiver": {
+    "fc": 200000000,
+    "agc_bandwidth_nr": 0,
+    "agc_set_point_nr": 0,
+    "gRdB_A": 20,
+    "gRdB_B": 20,
+    "lna_state": 0,
+    "dec_factor": 1,
+    "ifType": "sdrplay_api_IF_0_450",
+    "bwType": "sdrplay_api_BW_1_536",
+    "rf_notch_enable": false,
+    "dab_notch_enable": false
+  },
+  "processing": {
+    "n_samples": 2000
+  }
+}

@@ -1,6 +1,7 @@
 #include <complex>
 #include <deque>
 #include <fftw3.h>
+#include <jsoncpp/json/json.h>
 #include <mutex>
 #include <vector>
 /*
@@ -53,7 +54,7 @@ public:
    *
    * @param max_length Maximum number of samples stored in sample buffers
    */
-  SpecData(int max_length);
+  SpecData(Json::Value processingCfg);
 
   /*
    * Processing function loop.
