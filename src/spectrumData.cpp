@@ -1,5 +1,6 @@
 #include <atomic>
 #include <unistd.h>
+#include <utility>
 
 #include "spectrumData.h"
 
@@ -22,10 +23,11 @@ SpecData::SpecData(Json::Value cfg) {
                               FFTW_ESTIMATE);
   double bandwidth =
       SpecData::bwNumMap.at(cfg["receiver"]["bwType"].asString());
-  frequency = (double *)malloc(sizeof(double) * max_length);
-  for (unsigned int i = 0; i < max_length; i++) {
-    frequency[i] = 2.0 * bandwidth * ((double)i) / ((double)max_length);
-  }
+  // TODO: Do this properly
+  // frequency = (double *)malloc(sizeof(double) * max_length);
+  // for (unsigned int i = 0; i < max_length; i++) {
+  //   frequency[i] = 2.0 * bandwidth * ((double)i) / ((double)max_length);
+  // }
 }
 
 void SpecData::update_data(short *xi, short *xq, unsigned int numSamples) {
@@ -55,10 +57,16 @@ void SpecData::calc_dft() {
 
 void SpecData::process_data(std::atomic<bool> *exit_flag) {
   while (!exit_flag->load()) {
-    // Lock mute for SpecData so plotting thread does not read spectrum during
+    // Lock mutex for SpecData so plotting thread does not read spectrum during
     // FFTW process
     mutex_lock.lock();
     calc_dft();
+    // perform FFTshift
+    int id_swap;
+    for (int i = 0; i < max_length / 2; i++) {
+      id_swap = (i + max_length / 2 - 1) % max_length;
+      std::swap(spectrum[i], spectrum[id_swap]);
+    }
     mutex_lock.unlock();
     sleep(1);
   }
@@ -74,14 +82,11 @@ void SpecData::set_plot_datablock(FILE *plot_pipe, int id) {
   fprintf(plot_pipe, "$data_%d << EOD\n", id);
   // Lock mutex to ensure spectrum is not updated during plotting process
   mutex_lock.lock();
-  // Calculate offset to plot only 1 side of DFT
-  unsigned int offset = max_length / 2;
-  for (unsigned int i = 0; i < max_length / 2; i++) {
+  for (unsigned int i = 0; i < max_length; i++) {
     // TODO: Calculate frequency vector correctly to replace i with frequency[i]
-    fprintf(
-        plot_pipe, "%f %f\n", frequency[i],
-        std::log10(sqrt(spectrum[i + offset][0] * spectrum[i + offset][0] +
-                        spectrum[i + offset][1] * spectrum[i + offset][1])));
+    fprintf(plot_pipe, "%d %f\n", i,
+            std::log10(sqrt(spectrum[i][0] * spectrum[i][0] +
+                            spectrum[i][1] * spectrum[i][1])));
   }
   mutex_lock.unlock();
   // End data write
@@ -103,7 +108,7 @@ void RadarData::plot_spectra(std::atomic<bool> *exit_flag) {
   FILE *plot_pipe = popen("gnuplot -persist", "w");
 
   // Reset data block and replot each second
-  while (!(exit_flag->load(std::memory_order_relaxed))) {
+  while (!(exit_flag->load())) {
     sleep(1);
     // Set datablock values
     stream_a_data->set_plot_datablock(plot_pipe, 1);
@@ -115,14 +120,14 @@ void RadarData::plot_spectra(std::atomic<bool> *exit_flag) {
 
     // Receiver A plot
     fprintf(plot_pipe, "set title \"Receiver A\"\n");
-    fprintf(plot_pipe, "set xlabel \"Frequency [MHz]\"\n");
+    fprintf(plot_pipe, "set xlabel \"Frequency\"\n");
     fprintf(plot_pipe, "set ylabel \"Amplitude\"\n");
     fprintf(plot_pipe, "unset key\n");
     fprintf(plot_pipe, "plot $data_1 with lines\n");
 
     // Receiver B plot
     fprintf(plot_pipe, "set title \"Receiver B\"\n");
-    fprintf(plot_pipe, "set xlabel \"Frequency [MHz]\"\n");
+    fprintf(plot_pipe, "set xlabel \"Frequency\"\n");
     fprintf(plot_pipe, "set ylabel \"Amplitude\"\n");
     fprintf(plot_pipe, "unset key\n");
     fprintf(plot_pipe, "plot $data_2 with lines\n");

@@ -28,6 +28,7 @@ const unsigned int MaxDevs = 1;
 Receiver::Receiver(Json::Value receiverCfg) {
   // Assign Receiver parameters
   fc = receiverCfg["fc"].asUInt();
+  fs = receiverCfg["fs"].asUInt();
   agc_bandwidth_nr = receiverCfg["agc_bandwidth_nr"].asInt();
   agc_set_point_nr = receiverCfg["agc_set_point_nr"].asInt();
   gRdB_A = receiverCfg["gRdB_A"].asInt();
@@ -198,6 +199,9 @@ void Receiver::set_device_parameters() {
     cleanup();
     exit(1);
   }
+
+  // Sample frequency
+  chosenDevice->rspDuoSampleFreq = fs;
 
   // Tuner frequency (??)
   chParams->tunerParams.rfFreq.rfHz = fc;
