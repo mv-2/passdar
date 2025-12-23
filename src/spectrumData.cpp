@@ -1,20 +1,31 @@
-#include "spectrumData.h"
 #include <atomic>
-#include <fftw3.h>
-#include <mutex>
 #include <unistd.h>
+
+#include "spectrumData.h"
 
 const std::complex<double> I = std::complex<double>(0, 1.0);
 const std::complex<double> COMPLEX_ZERO = std::complex<double>(0.0, 0.0);
 
-SpecData::SpecData(Json::Value processCfg) {
-  max_length = processCfg["n_samples"].asUInt();
+const std::unordered_map<std::string, double> SpecData::bwNumMap = {
+    {"sdrplay_api_BW_0_200", 200.0},  {"sdrplay_api_BW_0_300", 300.0},
+    {"sdrplay_api_BW_0_600", 600.0},  {"sdrplay_api_BW_1_536", 1536.0},
+    {"sdrplay_api_BW_5_000", 5000.0}, {"sdrplay_api_BW_6_000", 6000.0},
+    {"sdrplay_api_BW_7_000", 7000.0}, {"sdrplay_api_BW_8_000", 8000.0}};
+
+SpecData::SpecData(Json::Value cfg) {
+  max_length = cfg["processing"]["n_samples"].asUInt();
   data_iq = new ReceiverRawIQ(max_length);
   spectrum = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * max_length);
   sample_buffer =
       (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * max_length);
   fft_plan = fftw_plan_dft_1d(max_length, sample_buffer, spectrum, FFTW_FORWARD,
                               FFTW_ESTIMATE);
+  double bandwidth =
+      SpecData::bwNumMap.at(cfg["receiver"]["bwType"].asString());
+  frequency = (double *)malloc(sizeof(double) * max_length);
+  for (unsigned int i = 0; i < max_length; i++) {
+    frequency[i] = 2.0 * bandwidth * ((double)i) / ((double)max_length);
+  }
 }
 
 void SpecData::update_data(short *xi, short *xq, unsigned int numSamples) {
@@ -68,7 +79,7 @@ void SpecData::set_plot_datablock(FILE *plot_pipe, int id) {
   for (unsigned int i = 0; i < max_length / 2; i++) {
     // TODO: Calculate frequency vector correctly to replace i with frequency[i]
     fprintf(
-        plot_pipe, "%d %f\n", i,
+        plot_pipe, "%f %f\n", frequency[i],
         std::log10(sqrt(spectrum[i + offset][0] * spectrum[i + offset][0] +
                         spectrum[i + offset][1] * spectrum[i + offset][1])));
   }
@@ -104,14 +115,14 @@ void RadarData::plot_spectra(std::atomic<bool> *exit_flag) {
 
     // Receiver A plot
     fprintf(plot_pipe, "set title \"Receiver A\"\n");
-    fprintf(plot_pipe, "set xlabel \"Frequency\"\n");
+    fprintf(plot_pipe, "set xlabel \"Frequency [MHz]\"\n");
     fprintf(plot_pipe, "set ylabel \"Amplitude\"\n");
     fprintf(plot_pipe, "unset key\n");
     fprintf(plot_pipe, "plot $data_1 with lines\n");
 
     // Receiver B plot
     fprintf(plot_pipe, "set title \"Receiver B\"\n");
-    fprintf(plot_pipe, "set xlabel \"Frequency\"\n");
+    fprintf(plot_pipe, "set xlabel \"Frequency [MHz]\"\n");
     fprintf(plot_pipe, "set ylabel \"Amplitude\"\n");
     fprintf(plot_pipe, "unset key\n");
     fprintf(plot_pipe, "plot $data_2 with lines\n");

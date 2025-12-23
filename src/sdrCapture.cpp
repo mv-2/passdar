@@ -38,6 +38,7 @@ Receiver::Receiver(Json::Value receiverCfg) {
   dab_notch_enable = receiverCfg["dab_notch_enable"].asBool();
   ifType = cfgInterface::ifType_map.at(receiverCfg["ifType"].asString());
   bwType = cfgInterface::bwType_map.at(receiverCfg["bwType"].asString());
+  loType = cfgInterface::loType_map.at(receiverCfg["loType"].asString());
 }
 
 void Receiver::start_api() {
@@ -227,8 +228,11 @@ void Receiver::set_device_parameters() {
   // set decimation parameters
   chParams->ctrlParams.decimation.enable = 1;
   chParams->ctrlParams.decimation.decimationFactor = dec_factor;
+
+  // IF, LO and BW parameters
   chParams->tunerParams.ifType = ifType;
   chParams->tunerParams.bwType = bwType;
+  chParams->tunerParams.loMode = loType;
 
   // Notch filter flags
   chParams->rspDuoTunerParams.rfNotchEnable = rf_notch_enable;

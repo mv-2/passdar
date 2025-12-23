@@ -15,14 +15,17 @@ CONFIG_PATH = cfg/cfg.json
 SRCS = src/main.cpp src/sdrCapture.cpp src/spectrumData.cpp src/cfgInterface.cpp
 
 # linked librarys
-LIBS = -lsdrplay_api -L/usr/local/lib -lfftw3 -ljsoncpp
+LIBS = -lsdrplay_api -L/usr/local/lib -lfftw3 -ljsoncpp -Iexternal/imgui -Iexternal/implot
 
 all:
 	make compile
-	make run
+	make $(TARGET)
 
 compile:
 	$(CC) $(CFLAGS) $(SRCS) -o $(TARGET_DIR)/$(TARGET) $(LIBS)
 
-run:
+$(TARGET):
 	./$(TARGET_DIR)/$(TARGET) $(CONFIG_PATH)
+
+clean:
+	rm $(TARGET_DIR)/$(TARGET)

@@ -60,8 +60,8 @@ int main(int argc, char *argv[]) {
 
   // Create receiver and data objects
   Receiver *receiver = new Receiver(cfg["receiver"]);
-  SpecData *stream_a_data = new SpecData(cfg["processing"]);
-  SpecData *stream_b_data = new SpecData(cfg["processing"]);
+  SpecData *stream_a_data = new SpecData(cfg);
+  SpecData *stream_b_data = new SpecData(cfg);
   RadarData *radar_data = new RadarData(stream_a_data, stream_b_data);
 
   // Capture Thread

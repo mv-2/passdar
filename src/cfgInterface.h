@@ -21,6 +21,11 @@ public:
   static const std::unordered_map<std::string, sdrplay_api_Bw_MHzT> bwType_map;
 
   /*
+   * unordered_map containing string to enum mappings for all LO values
+   */
+  static const std::unordered_map<std::string, sdrplay_api_LoModeT> loType_map;
+
+  /*
    * Static method to read config to Json::Value
    */
   static Json::Value load_config(std::string cfg_path);

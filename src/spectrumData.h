@@ -3,6 +3,7 @@
 #include <fftw3.h>
 #include <jsoncpp/json/json.h>
 #include <mutex>
+#include <unordered_map>
 #include <vector>
 /*
  * Store Raw IQ values output from RSPDuo device
@@ -50,7 +51,10 @@ public:
   fftw_complex *spectrum;
 
   // Frequency vector
-  std::vector<double> frequency;
+  double *frequency;
+
+  // Unordered map of numeric bandwidths
+  static const std::unordered_map<std::string, double> bwNumMap;
 
   /*
    * constructor

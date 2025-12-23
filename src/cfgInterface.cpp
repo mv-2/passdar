@@ -1,5 +1,6 @@
 #include "cfgInterface.h"
 #include <jsoncpp/json/reader.h>
+#include <sdrplay_api_tuner.h>
 
 const std::unordered_map<std::string, sdrplay_api_If_kHzT>
     cfgInterface::ifType_map = {
@@ -20,6 +21,14 @@ const std::unordered_map<std::string, sdrplay_api_Bw_MHzT>
         {"sdrplay_api_BW_6_000", sdrplay_api_BW_6_000},
         {"sdrplay_api_BW_7_000", sdrplay_api_BW_7_000},
         {"sdrplay_api_BW_8_000", sdrplay_api_BW_8_000}};
+
+const std::unordered_map<std::string, sdrplay_api_LoModeT>
+    cfgInterface::loType_map = {
+        {"sdrplay_api_LO_Undefined", sdrplay_api_LO_Undefined},
+        {"sdrplay_api_LO_Auto", sdrplay_api_LO_Auto},
+        {"sdrplay_api_LO_120MHz", sdrplay_api_LO_120MHz},
+        {"sdrplay_api_LO_144MHz", sdrplay_api_LO_144MHz},
+        {"sdrplay_api_LO_168MHz", sdrplay_api_LO_168MHz}};
 
 Json::Value cfgInterface::load_config(std::string cfg_path) {
   Json::Value root;

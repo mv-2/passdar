@@ -55,6 +55,7 @@ public:
   int dec_factor;
   sdrplay_api_If_kHzT ifType;
   sdrplay_api_Bw_MHzT bwType;
+  sdrplay_api_LoModeT loType;
   bool rf_notch_enable;
   bool dab_notch_enable;
 
