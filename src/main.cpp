@@ -12,6 +12,7 @@
 #include <unistd.h>
 
 #include "cfgInterface.h"
+#include "radarData.h"
 #include "sdrCapture.h"
 
 // Keyboard functions adapted from
@@ -46,23 +47,23 @@ bool break_loop() {
 
 // Driver function for testing
 int main(int argc, char *argv[]) {
-  // Loop flag
-  std::atomic<bool> exit_flag(false);
-
   // Get config file location
   if (argc < 2) {
     std::cerr << "No config file name detected" << std::endl;
     return 0;
   }
 
-  // Load configs as JSON values
-  Json::Value cfg = cfgInterface::load_config(argv[1]);
+  // Create config struct
+  Config cfg = Config(argv[1]);
 
   // Create receiver and data objects
-  Receiver *receiver = new Receiver(cfg["receiver"]);
+  Receiver *receiver = new Receiver(cfg.receiver_cfg);
   SpecData *stream_a_data = new SpecData(cfg);
   SpecData *stream_b_data = new SpecData(cfg);
   RadarData *radar_data = new RadarData(stream_a_data, stream_b_data);
+
+  // Thread exit flag
+  std::atomic<bool> exit_flag(false);
 
   // Capture Thread
   std::thread captureThread(

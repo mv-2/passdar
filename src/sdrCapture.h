@@ -8,6 +8,7 @@
 #include <sdrplay_api_tuner.h>
 #include <stdint.h>
 
+#include "cfgInterface.h"
 #include "spectrumData.h"
 
 class Receiver {
@@ -16,7 +17,7 @@ public:
    *
    * @param cfg_path file path to json config file
    */
-  Receiver(Json::Value receiverCfg);
+  Receiver(ReceiverConfig receiverCfg);
 
   /*
    * Data capture looping function.

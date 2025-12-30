@@ -25,21 +25,21 @@ SpecData *stream_b_data;
 // One (1) device
 const unsigned int MaxDevs = 1;
 
-Receiver::Receiver(Json::Value receiverCfg) {
+Receiver::Receiver(ReceiverConfig receiverCfg) {
   // Assign Receiver parameters
-  fc = receiverCfg["fc"].asUInt();
-  fs = receiverCfg["fs"].asUInt();
-  agc_bandwidth_nr = receiverCfg["agc_bandwidth_nr"].asInt();
-  agc_set_point_nr = receiverCfg["agc_set_point_nr"].asInt();
-  gRdB_A = receiverCfg["gRdB_A"].asInt();
-  gRdB_B = receiverCfg["gRdB_B"].asInt();
-  lna_state = receiverCfg["lna_state"].asInt();
-  dec_factor = receiverCfg["dec_factor"].asInt();
-  rf_notch_enable = receiverCfg["rf_notch_enable"].asBool();
-  dab_notch_enable = receiverCfg["dab_notch_enable"].asBool();
-  ifType = cfgInterface::ifType_map.at(receiverCfg["ifType"].asString());
-  bwType = cfgInterface::bwType_map.at(receiverCfg["bwType"].asString());
-  loType = cfgInterface::loType_map.at(receiverCfg["loType"].asString());
+  fc = receiverCfg.fc;
+  fs = receiverCfg.fs;
+  agc_bandwidth_nr = receiverCfg.agc_bandwidth_nr;
+  agc_set_point_nr = receiverCfg.agc_set_point_nr;
+  gRdB_A = receiverCfg.gRdB_A;
+  gRdB_B = receiverCfg.gRdB_B;
+  lna_state = receiverCfg.lna_state;
+  dec_factor = receiverCfg.dec_factor;
+  rf_notch_enable = receiverCfg.rf_notch_enable;
+  dab_notch_enable = receiverCfg.dab_notch_enable;
+  ifType = receiverCfg.ifType;
+  bwType = receiverCfg.bwType;
+  loType = receiverCfg.loType;
 }
 
 void Receiver::start_api() {

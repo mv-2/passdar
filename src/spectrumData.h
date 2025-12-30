@@ -1,40 +1,15 @@
+#ifndef SPECTRUMDATA_H
+#define SPECTRUMDATA_H
+
 #include <complex>
-#include <deque>
 #include <fftw3.h>
 #include <jsoncpp/json/json.h>
 #include <mutex>
 #include <unordered_map>
 #include <vector>
-/*
- * Store Raw IQ values output from RSPDuo device
- */
-class ReceiverRawIQ {
-public:
-  // std::deque of std::complex<double> samples
-  std::deque<std::complex<double>> samples;
 
-  // Mutex
-  std::mutex mutex_lock;
-
-  // maximum number of samples stored by object
-  unsigned int max_length;
-
-  /*
-   * ReceiverRawIQ constructor
-   *
-   * @param max_length number of points stored at any time in buffers
-   */
-  ReceiverRawIQ(unsigned int max_length);
-
-  /*
-   * Update data from USB data packet
-   *
-   * @param *xi I/real sample buffer from RSPDuo
-   * @param *xq Q/imaginaryv sample buffer from RSPDuo
-   * @param numSamples buffer length
-   */
-  void update_data(short *xi, short *xq, unsigned int numSamples);
-};
+#include "cfgInterface.h"
+#include "receiverIq.h"
 
 /*
  * Stores spectrum data
@@ -51,7 +26,7 @@ public:
   fftw_complex *spectrum;
 
   // Frequency vector
-  double *frequency;
+  std::vector<double> frequency;
 
   // Unordered map of numeric bandwidths
   static const std::unordered_map<std::string, double> bwNumMap;
@@ -59,9 +34,8 @@ public:
   /*
    * constructor
    *
-   * @param max_length Maximum number of samples stored in sample buffers
    */
-  SpecData(Json::Value processingCfg);
+  SpecData(Config cfg);
 
   /*
    * Processing function loop.
@@ -103,31 +77,4 @@ private:
    */
   void calc_dft();
 };
-
-/*
- * Stores data of both streams required for RADAR processing
- */
-class RadarData {
-public:
-  // RSPDuo stream A
-  SpecData *stream_a_data;
-
-  // RSPDuo stream B
-  SpecData *stream_b_data;
-
-  /*
-   * Constructor for RadarData class
-   *
-   * @param stream_a_data Pointer to SpecData object for stream A
-   * @param stream_B_data Pointer to SpecData object for stream B
-   */
-  RadarData(SpecData *stream_a_data, SpecData *stream_b_data);
-
-  /*
-   * Plots live spectra comparison of stream A and B using GNUPLOT
-   *
-   * @param exit_flag Pointer to atomic<bool> flag set to true when user ends
-   * program.
-   */
-  void plot_spectra(std::atomic<bool> *exit_flag);
-};
+#endif

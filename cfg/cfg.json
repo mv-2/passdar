@@ -1,20 +1,22 @@
 {
   "receiver": {
     "fc": 226500000,
-    "fs": 400000000,
+    "fs": 20000000,
     "agc_bandwidth_nr": 0,
     "agc_set_point_nr": 0,
     "gRdB_A": 40,
     "gRdB_B": 40,
-    "lna_state": 0,
+    "lna_state": 7,
     "dec_factor": 1,
-    "ifType": "sdrplay_api_IF_2_048",
+    "ifType": "sdrplay_api_IF_1_620",
     "bwType": "sdrplay_api_BW_8_000",
     "loType": "sdrplay_api_LO_Auto",
     "rf_notch_enable": false,
     "dab_notch_enable": false
   },
   "processing": {
-    "n_samples": 2000
+    "buffer_size": 4000,
+    "speed_step": 1,
+    "range_step": 200
   }
 }

@@ -12,7 +12,7 @@ TARGET_DIR = target
 CONFIG_PATH = cfg/cfg.json
 
 # source files
-SRCS = src/main.cpp src/sdrCapture.cpp src/spectrumData.cpp src/cfgInterface.cpp
+SRCS = src/main.cpp src/sdrCapture.cpp src/spectrumData.cpp src/cfgInterface.cpp src/radarData.cpp src/receiverIq.cpp
 
 # linked librarys
 LIBS = -lsdrplay_api -L/usr/local/lib -lfftw3 -ljsoncpp -Iexternal/imgui -Iexternal/implot
