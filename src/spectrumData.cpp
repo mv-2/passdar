@@ -16,11 +16,13 @@ const std::unordered_map<std::string, double> SpecData::bwNumMap = {
 SpecData::SpecData(Config cfg) {
   max_length = cfg.process_cfg.buffer_size;
   data_iq = new ReceiverRawIQ(max_length);
-  spectrum = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * max_length);
+  spectrum_internal =
+      (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * max_length);
+  spectrum.reserve(max_length);
   sample_buffer =
       (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * max_length);
-  fft_plan = fftw_plan_dft_1d(max_length, sample_buffer, spectrum, FFTW_FORWARD,
-                              FFTW_EXHAUSTIVE);
+  fft_plan = fftw_plan_dft_1d(max_length, sample_buffer, spectrum_internal,
+                              FFTW_FORWARD, FFTW_EXHAUSTIVE);
   double bandwidth = cfg.receiver_cfg.bwType;
   frequency.reserve(max_length);
   for (int i = -static_cast<int>(max_length) / 2;
@@ -63,7 +65,13 @@ void SpecData::process_data(std::atomic<bool> *exit_flag) {
     // FFTW process
     mutex_lock.lock();
     calc_dft();
-    // perform FFTshift
+    for (int i = 0; i < max_length; i++) {
+      spectrum[i] =
+          20 *
+          log10(std::sqrt(spectrum_internal[i][0] * spectrum_internal[i][0] +
+                          spectrum_internal[i][1] * spectrum_internal[i][1]));
+    }
+    // perform FFTshift and assign to public spectrum field
     int id_swap;
     for (int i = 0; i < max_length / 2; i++) {
       id_swap = (i + max_length / 2 - 1) % max_length;
@@ -75,21 +83,6 @@ void SpecData::process_data(std::atomic<bool> *exit_flag) {
 
   // Free resources
   fftw_destroy_plan(fft_plan);
-  fftw_free(spectrum);
+  fftw_free(spectrum_internal);
   fftw_free(sample_buffer);
-}
-
-void SpecData::set_plot_datablock(FILE *plot_pipe, int id) {
-  // Assign datablock to $data_<x> in gnuplot process
-  fprintf(plot_pipe, "$data_%d << EOD\n", id);
-  // Lock mutex to ensure spectrum is not updated during plotting process
-  mutex_lock.lock();
-  for (unsigned int i = 0; i < max_length; i++) {
-    fprintf(plot_pipe, "%f %f\n", frequency[i],
-            std::log10(sqrt(spectrum[i][0] * spectrum[i][0] +
-                            spectrum[i][1] * spectrum[i][1])));
-  }
-  mutex_lock.unlock();
-  // End data write
-  fprintf(plot_pipe, "EOD\n");
 }

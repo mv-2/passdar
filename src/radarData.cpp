@@ -1,6 +1,8 @@
 #include <cmath>
 #include <complex.h>
 #include <cstdlib>
+#include <matplot/freestanding/axes_functions.h>
+#include <matplot/matplot.h>
 
 #include "cfgInterface.h"
 #include "radarData.h"
@@ -38,33 +40,30 @@ RadarData::RadarData(Config cfg, SpecData *_stream_a_data,
 }
 
 void RadarData::plot_spectra(std::atomic<bool> *exit_flag) {
-  // Initialise plot window
-  FILE *plot_pipe = popen("gnuplot -persist", "w");
+  auto fig = matplot::figure(false);
 
-  // Reset data block and replot each second
-  while (!(exit_flag->load())) {
+  matplot::tiledlayout(2, 1);
+  auto ax1 = matplot::nexttile();
+  matplot::plot(ax1, stream_a_data->frequency, stream_a_data->spectrum);
+  matplot::title(ax1, "Receiver A");
+  matplot::ylabel("Amplitude [dB]");
+  matplot::xlabel("Frequency [kHz]");
+
+  auto ax2 = matplot::nexttile();
+  matplot::plot(ax2, stream_b_data->frequency, stream_b_data->spectrum);
+  matplot::title(ax1, "Receiver B");
+  matplot::ylabel("Amplitude [dB]");
+  matplot::xlabel("Frequency [kHz]");
+
+  fig->draw();
+
+  while (!exit_flag) {
     sleep(1);
-    // Set datablock values
-    stream_a_data->set_plot_datablock(plot_pipe, 1);
-    stream_b_data->set_plot_datablock(plot_pipe, 2);
-
-    // Create multiplot layout
-    fprintf(plot_pipe,
-            "set multiplot layout 2,1 rowsfirst title \"Spectra\"\n");
-
-    // Receiver A plot
-    fprintf(plot_pipe, "set title \"Receiver A\"\n");
-    fprintf(plot_pipe, "set xlabel \"Frequency [kHz]\"\n");
-    fprintf(plot_pipe, "set ylabel \"Amplitude\"\n");
-    fprintf(plot_pipe, "unset key\n");
-    fprintf(plot_pipe, "plot $data_1 with lines\n");
-
-    // Receiver B plot
-    fprintf(plot_pipe, "set title \"Receiver B\"\n");
-    fprintf(plot_pipe, "set xlabel \"Frequency [kHz]\"\n");
-    fprintf(plot_pipe, "set ylabel \"Amplitude\"\n");
-    fprintf(plot_pipe, "unset key\n");
-    fprintf(plot_pipe, "plot $data_2 with lines\n");
+    stream_a_data->mutex_lock.lock();
+    stream_b_data->mutex_lock.lock();
+    fig->draw();
+    stream_a_data->mutex_lock.unlock();
+    stream_b_data->mutex_lock.unlock();
   }
 }
 

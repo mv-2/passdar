@@ -22,8 +22,8 @@ public:
   // Raw IQ data object
   ReceiverRawIQ *data_iq;
 
-  // Spectrum buffer to store FFTW3 DFT results
-  fftw_complex *spectrum;
+  // Spectrum vector
+  std::vector<double> spectrum;
 
   // Frequency vector
   std::vector<double> frequency;
@@ -48,14 +48,6 @@ public:
   void process_data(std::atomic<bool> *exit_flag);
 
   /*
-   * Set datablock of name $data_<id> in gnuplot process.
-   *
-   * @param plot_pipe Pipe with persistent gnuplot process
-   * @param id ID number of datablock $data_<id>
-   */
-  void set_plot_datablock(FILE *plot_pipe, int id);
-
-  /*
    * Updates sample buffer with most recent samples from USB packet
    *
    * @param *xi I/real sample buffer from RSPDuo
@@ -64,9 +56,10 @@ public:
    */
   void update_data(short *xi, short *xq, unsigned int numSamples);
 
-private:
   // Mutex
   std::mutex mutex_lock;
+
+private:
   // FFTW plan
   fftw_plan fft_plan;
 
@@ -78,5 +71,8 @@ private:
    * spectrum field.
    */
   void calc_dft();
+
+  // Spectrum buffer to store FFTW3 DFT results
+  fftw_complex *spectrum_internal;
 };
 #endif
