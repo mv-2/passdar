@@ -17,6 +17,7 @@
   "processing": {
     "buffer_size": 4000,
     "speed_step": 1,
-    "range_step": 200
+    "max_range": 30000,
+    "max_speed": 330
   }
 }

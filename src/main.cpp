@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
   Receiver *receiver = new Receiver(cfg.receiver_cfg);
   SpecData *stream_a_data = new SpecData(cfg);
   SpecData *stream_b_data = new SpecData(cfg);
-  RadarData *radar_data = new RadarData(stream_a_data, stream_b_data);
+  RadarData *radar_data = new RadarData(cfg, stream_a_data, stream_b_data);
 
   // Thread exit flag
   std::atomic<bool> exit_flag(false);

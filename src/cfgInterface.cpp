@@ -87,13 +87,15 @@ ReceiverConfig::ReceiverConfig() {
 ProcessConfig::ProcessConfig(Json::Value json_prcs) {
   buffer_size = json_prcs["buffer_size"].asUInt();
   speed_step = json_prcs["speed_step"].asDouble();
-  range_step = json_prcs["range_step"].asDouble();
+  max_range = json_prcs["max_range"].asDouble();
+  max_speed = json_prcs["max_speed"].asDouble();
 }
 
 ProcessConfig::ProcessConfig() {
   buffer_size = 0.0;
   speed_step = 0.0;
-  range_step = 0.0;
+  max_range = 0.0;
+  max_speed = 0.0;
 }
 
 Config::Config(std::string cfg_path) : process_cfg(), receiver_cfg() {

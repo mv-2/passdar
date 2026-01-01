@@ -4,6 +4,7 @@
 #include <atomic>
 #include <unistd.h>
 
+#include "cfgInterface.h"
 #include "spectrumData.h"
 /*
  * Stores data of both streams required for RADAR processing
@@ -16,13 +17,28 @@ public:
   // RSPDuo stream B
   SpecData *stream_b_data;
 
+  // Range step in m
+  double range_step;
+
+  // Speed step in m
+  double speed_step;
+
+  // Number of speed points
+  int n_speed;
+
+  // Number of range points
+  int n_range;
+
+  // ambiguity surface
+  std::vector<std::vector<double>> ambiguity;
+
   /*
    * Constructor for RadarData class
    *
    * @param stream_a_data Pointer to SpecData object for stream A
    * @param stream_B_data Pointer to SpecData object for stream B
    */
-  RadarData(SpecData *stream_a_data, SpecData *stream_b_data);
+  RadarData(Config cfg, SpecData *stream_a_data, SpecData *stream_b_data);
 
   /*
    * Plots live spectra comparison of stream A and B using GNUPLOT
@@ -36,5 +52,21 @@ public:
    * Calculates ambiguity surface between receivers.
    */
   void process_ambiguity();
+
+  /*
+   * Plots live ambiguity
+   *
+   * @param exit_flag Pointer to atomic<bool> flag set to true when user ends
+   * program.
+   */
+  void plot_ambiguity(std::atomic<bool> *exit_flag);
+
+private:
+  // Copied data samples
+  std::vector<std::complex<double>> data_a_copy;
+  std::vector<std::complex<double>> data_b_copy;
+
+  // sample frequency
+  unsigned int sample_frequency;
 };
 #endif

@@ -34,6 +34,8 @@ public:
   /*
    * constructor
    *
+   * @param cfg Config struct containing data required to set SpecData
+   * parameters
    */
   SpecData(Config cfg);
 
