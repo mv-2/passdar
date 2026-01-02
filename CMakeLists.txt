@@ -15,16 +15,19 @@ add_executable(passdar ${SOURCES})
 
 # JsonCpp
 find_package(jsoncpp REQUIRED)
+target_link_libraries(passdar PUBLIC JsonCpp::JsonCpp)
 
-# MATPLOT
-add_subdirectory(external/matplotplusplus)
-
-target_link_libraries(passdar matplot JsonCpp::JsonCpp)
-
-## ========================= FFTW3 & SDRPLAY INCLUSION =========================
+# FFTW
 set(FFTW_ROOT "/usr/local/x86_64-linux-gnu")
 find_path(FFTW_INCLUDE_DIR NAMES fftw3.h PATHS ${FFTW_ROOT}/include)
 find_library(FFTW_LIBRARY NAMES fftw3 PATHS ${FFTW_ROOT}/lib)
+target_include_directories(passdar
+  PRIVATE
+    ${FFTW_INCLUDE_DIR}
+)
+target_link_libraries(passdar PUBLIC ${FFTW_LIBRARY})
+
+# SDRPLAY
 find_path(SDRPLAY_INCLUDE_DIR sdrplay_api.h
     PATHS /usr/local/include /usr/include
     NO_CMAKE_FIND_ROOT_PATH
@@ -35,10 +38,10 @@ find_library(SDRPLAY_LIBRARY NAMES sdrplay_api libsdrplay_api.so
 )
 target_include_directories(passdar
   PRIVATE
-    ${FFTW_INCLUDE_DIR}
     ${SDRPLAY_INCLUDE_DIR}
 )
+target_link_libraries(passdar PUBLIC ${SDRPLAY_LIBRARY})
 
-# Link the library to your executable
-target_link_libraries(passdar matplot ${FFTW_LIBRARY} ${SDRPLAY_LIBRARY})
-
+# Git submodules
+add_subdirectory(external)
+target_link_libraries(passdar PUBLIC imgui_core implot)

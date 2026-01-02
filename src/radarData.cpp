@@ -1,10 +1,14 @@
+#include <GL/gl.h>
+#include <GLFW/glfw3.h>
 #include <cmath>
 #include <complex.h>
 #include <cstdlib>
-#include <matplot/freestanding/axes_functions.h>
-#include <matplot/matplot.h>
 #include <vector>
 
+#include "../external/imgui/backends/imgui_impl_glfw.h"
+#include "../external/imgui/backends/imgui_impl_opengl3.h"
+#include "../external/imgui/imgui.h"
+#include "../external/implot/implot.h"
 #include "cfgInterface.h"
 #include "radarData.h"
 
@@ -39,31 +43,84 @@ RadarData::RadarData(Config cfg, SpecData *_stream_a_data,
 }
 
 void RadarData::plot_spectra(std::atomic<bool> *exit_flag) {
-  auto fig = matplot::figure(false);
-
-  matplot::tiledlayout(2, 1);
-  auto ax1 = matplot::nexttile();
-  matplot::plot(ax1, stream_a_data->frequency, stream_a_data->spectrum);
-  matplot::title(ax1, "Receiver A");
-  matplot::ylabel("Amplitude [dB]");
-  matplot::xlabel("Frequency [kHz]");
-
-  auto ax2 = matplot::nexttile();
-  matplot::plot(ax2, stream_b_data->frequency, stream_b_data->spectrum);
-  matplot::title(ax1, "Receiver B");
-  matplot::ylabel("Amplitude [dB]");
-  matplot::xlabel("Frequency [kHz]");
-
-  fig->draw();
-
-  while (!exit_flag) {
-    sleep(1);
-    stream_a_data->mutex_lock.lock();
-    stream_b_data->mutex_lock.lock();
-    // fig->draw();
-    stream_a_data->mutex_lock.unlock();
-    stream_b_data->mutex_lock.unlock();
+  // GLFW Window Initialisation
+  if (!glfwInit()) {
+    return;
   }
+
+  // Set GLSL Version
+  const char *glsl_version = "#version 130";
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+
+  // Create window
+  float main_scale =
+      ImGui_ImplGlfw_GetContentScaleForMonitor(glfwGetPrimaryMonitor());
+  GLFWwindow *window =
+      glfwCreateWindow((int)(1280 * main_scale), (int)(800 * main_scale),
+                       "Test Window", nullptr, nullptr);
+  if (window == nullptr) {
+    return;
+  }
+  glfwMakeContextCurrent(window);
+  glfwSwapInterval(1);
+
+  // Setup ImGui Context
+  IMGUI_CHECKVERSION();
+  ImGui::CreateContext();
+  ImGuiIO &io = ImGui::GetIO();
+  (void)io;
+  io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+  io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+
+  // Setup Implot Context
+  ImPlot::CreateContext();
+
+  // Dark Mode
+  ImGui::StyleColorsDark();
+
+  // Scaling
+  ImGuiStyle &style = ImGui::GetStyle();
+  style.ScaleAllSizes(main_scale);
+  style.FontScaleDpi = main_scale;
+
+  // Platform backend
+  ImGui_ImplGlfw_InitForOpenGL(window, true);
+  ImGui_ImplOpenGL3_Init(glsl_version);
+
+  while (!exit_flag->load() && !glfwWindowShouldClose(window)) {
+    glfwPollEvents();
+
+    // ImGui Frame
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+    ImGui::ShowDemoWindow();
+
+    // ImPlot Window
+    ImPlot::ShowDemoWindow();
+
+    // Render
+    ImGui::Render();
+    int display_w, display_h;
+    glfwGetFramebufferSize(window, &display_w, &display_h);
+    glViewport(0, 0, display_w, display_h);
+    glClearColor(0.2f, 0.3f, 0.4f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+    glfwSwapBuffers(window);
+  }
+
+  // Cleanup
+  ImGui_ImplOpenGL3_Shutdown();
+  ImGui_ImplGlfw_Shutdown();
+  ImPlot::DestroyContext();
+  ImGui::DestroyContext();
+  glfwDestroyWindow(window);
+  glfwTerminate();
+
+  return;
 }
 
 void RadarData::process_ambiguity() {
