@@ -102,22 +102,41 @@ void RadarData::plot_spectra(std::atomic<bool> *exit_flag) {
     ImGui::NewFrame();
     ImGui::Begin("Spectra");
 
-    // Implot
-    if (ImPlot::BeginPlot("Spectra")) {
-      // Axes limits
-      ImPlot::SetupAxes("Frequency [kHz]", "Amplitude [dB]");
-      ImPlot::SetupAxisLimits(ImAxis_X1, f_min, f_max, ImGuiCond_Always);
-      // Plot Stream A
-      ImPlot::PlotLine("Receiver A", stream_a_data->frequency.data(),
-                       stream_a_data->spectrum.data(),
-                       stream_a_data->frequency.size());
-      stream_a_data->mutex_lock.unlock();
-      // Plot Stream B
-      ImPlot::PlotLine("Receiver B", stream_b_data->frequency.data(),
-                       stream_b_data->spectrum.data(),
-                       stream_b_data->frequency.size());
-      stream_b_data->mutex_lock.unlock();
-      ImPlot::EndPlot();
+    // Tab bar of relevant plots
+    if (ImGui::BeginTabBar("Data Plots")) {
+      // Receiver spectra tab
+      if (ImGui::BeginTabItem("Receiver Spectra")) {
+        // Receiver subplots
+        if (ImPlot::BeginSubplots("Receiver Spectra", 2, 1, ImVec2(-1, -1))) {
+          // Receiver A plot
+          if (ImPlot::BeginPlot("Receiver A")) {
+            ImPlot::SetupAxes("Frequency [kHz]", "Amplitude [dB]");
+            stream_a_data->mutex_lock.lock();
+            ImPlot::PlotLine("Receiver A", stream_a_data->frequency.data(),
+                             stream_a_data->spectrum.data(),
+                             stream_a_data->frequency.size());
+            stream_a_data->mutex_lock.unlock();
+            ImPlot::EndPlot();
+          }
+          // Receiver B plot
+          if (ImPlot::BeginPlot("Receiver B")) {
+            ImPlot::SetupAxes("Frequency [kHz]", "Amplitude [dB]");
+            stream_b_data->mutex_lock.lock();
+            ImPlot::PlotLine("Receiver B", stream_b_data->frequency.data(),
+                             stream_b_data->spectrum.data(),
+                             stream_b_data->frequency.size());
+            stream_b_data->mutex_lock.unlock();
+            ImPlot::EndPlot();
+          }
+          ImPlot::EndSubplots();
+        }
+        ImGui::EndTabItem();
+      }
+      if (ImGui::BeginTabItem("Range - Doppler")) {
+        ImGui::Text("To be populated ...");
+        ImGui::EndTabItem();
+      }
+      ImGui::EndTabBar();
     }
     ImGui::End();
 

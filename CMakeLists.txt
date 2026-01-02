@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.23)
 project(passdar)
 set(CMAKE_CXX_STANDARD 23)
 
+# Comppile options
+add_compile_options(-O3 -Wpedantic -Werror)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "")
+
 # Project source files
 set(SOURCES
   src/main.cpp
