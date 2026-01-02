@@ -1,8 +1,6 @@
 #include <atomic>
 #include <fftw3.h>
-#include <iostream>
 #include <unistd.h>
-#include <utility>
 
 #include "cfgInterface.h"
 #include "spectrumData.h"
@@ -18,20 +16,20 @@ SpecData::SpecData(Config cfg) {
   data_iq = new ReceiverRawIQ(max_length);
   spectrum_internal =
       (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * max_length);
-  spectrum.reserve(max_length);
+  std::vector<double> spec(max_length);
+  spectrum.resize(max_length);
   sample_buffer =
       (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * max_length);
   fft_plan = fftw_plan_dft_1d(max_length, sample_buffer, spectrum_internal,
-                              FFTW_FORWARD, FFTW_EXHAUSTIVE);
+                              FFTW_FORWARD, FFTW_ESTIMATE);
   double bandwidth = cfg.receiver_cfg.bwType;
-  frequency.reserve(max_length);
+  frequency.resize(max_length);
   for (int i = -static_cast<int>(max_length) / 2;
        i < static_cast<int>(max_length) / 2; i++) {
     frequency.push_back((static_cast<double>(i) * bandwidth +
                          static_cast<double>(cfg.receiver_cfg.fc)) /
                         1000.0);
   }
-  std::cout << frequency.size() << std::endl;
 }
 
 void SpecData::update_data(short *xi, short *xq, unsigned int numSamples) {
@@ -62,20 +60,16 @@ void SpecData::calc_dft() {
 void SpecData::process_data(std::atomic<bool> *exit_flag) {
   while (!exit_flag->load()) {
     // Lock mutex for SpecData so plotting thread does not read spectrum during
-    // FFTW process
+    // FFTW process. Perform FFTshift on assignment
+    int id_swap;
     mutex_lock.lock();
     calc_dft();
     for (int i = 0; i < max_length; i++) {
-      spectrum[i] =
-          20 *
-          log10(std::sqrt(spectrum_internal[i][0] * spectrum_internal[i][0] +
-                          spectrum_internal[i][1] * spectrum_internal[i][1]));
-    }
-    // perform FFTshift and assign to public spectrum field
-    int id_swap;
-    for (int i = 0; i < max_length / 2; i++) {
       id_swap = (i + max_length / 2 - 1) % max_length;
-      std::swap(spectrum[i], spectrum[id_swap]);
+      spectrum[i] = 20.0 * log10(std::sqrt(spectrum_internal[id_swap][0] *
+                                               spectrum_internal[id_swap][0] +
+                                           spectrum_internal[id_swap][1] *
+                                               spectrum_internal[id_swap][1]));
     }
     mutex_lock.unlock();
     sleep(1);

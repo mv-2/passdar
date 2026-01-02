@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <matplot/freestanding/axes_functions.h>
 #include <matplot/matplot.h>
+#include <vector>
 
 #include "cfgInterface.h"
 #include "radarData.h"
@@ -32,11 +33,9 @@ RadarData::RadarData(Config cfg, SpecData *_stream_a_data,
   // range points ignores 0 range case
   n_range = static_cast<int>(cfg.process_cfg.max_range / range_step);
 
-  // Preallocate memory for ambiguity
-  ambiguity.reserve(n_speed);
-  for (int i = 0; i < n_speed; i++) {
-    ambiguity[i].reserve(n_range);
-  }
+  // preallocate ambiguity
+  std::vector<std::vector<double>> amb(n_speed, std::vector<double>(n_range));
+  ambiguity = amb;
 }
 
 void RadarData::plot_spectra(std::atomic<bool> *exit_flag) {
@@ -61,7 +60,7 @@ void RadarData::plot_spectra(std::atomic<bool> *exit_flag) {
     sleep(1);
     stream_a_data->mutex_lock.lock();
     stream_b_data->mutex_lock.lock();
-    fig->draw();
+    // fig->draw();
     stream_a_data->mutex_lock.unlock();
     stream_b_data->mutex_lock.unlock();
   }
