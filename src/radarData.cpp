@@ -43,6 +43,11 @@ RadarData::RadarData(Config cfg, SpecData *_stream_a_data,
 }
 
 void RadarData::plot_spectra(std::atomic<bool> *exit_flag) {
+  // Get axes limits
+  double f_min = stream_a_data->frequency.front();
+  double f_max = stream_a_data->frequency.back();
+  std::cout << "F_MIN: " << f_min << std::endl;
+
   // GLFW Window Initialisation
   if (!glfwInit()) {
     return;
@@ -95,10 +100,26 @@ void RadarData::plot_spectra(std::atomic<bool> *exit_flag) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
-    ImGui::ShowDemoWindow();
+    ImGui::Begin("Spectra");
 
-    // ImPlot Window
-    ImPlot::ShowDemoWindow();
+    // Implot
+    if (ImPlot::BeginPlot("Spectra")) {
+      // Axes limits
+      ImPlot::SetupAxes("Frequency [kHz]", "Amplitude [dB]");
+      ImPlot::SetupAxisLimits(ImAxis_X1, f_min, f_max, ImGuiCond_Always);
+      // Plot Stream A
+      ImPlot::PlotLine("Receiver A", stream_a_data->frequency.data(),
+                       stream_a_data->spectrum.data(),
+                       stream_a_data->frequency.size());
+      stream_a_data->mutex_lock.unlock();
+      // Plot Stream B
+      ImPlot::PlotLine("Receiver B", stream_b_data->frequency.data(),
+                       stream_b_data->spectrum.data(),
+                       stream_b_data->frequency.size());
+      stream_b_data->mutex_lock.unlock();
+      ImPlot::EndPlot();
+    }
+    ImGui::End();
 
     // Render
     ImGui::Render();

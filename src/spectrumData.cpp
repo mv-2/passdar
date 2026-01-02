@@ -23,7 +23,6 @@ SpecData::SpecData(Config cfg) {
   fft_plan = fftw_plan_dft_1d(max_length, sample_buffer, spectrum_internal,
                               FFTW_FORWARD, FFTW_ESTIMATE);
   double bandwidth = cfg.receiver_cfg.bwType;
-  frequency.resize(max_length);
   for (int i = -static_cast<int>(max_length) / 2;
        i < static_cast<int>(max_length) / 2; i++) {
     frequency.push_back((static_cast<double>(i) * bandwidth +
