@@ -2,6 +2,7 @@
 #define RADARDATA_H
 
 #include <atomic>
+#include <mutex>
 #include <unistd.h>
 
 #include "cfgInterface.h"
@@ -11,6 +12,9 @@
  */
 class RadarData {
 public:
+  // Mutex
+  std::mutex ambiguity_mutex;
+
   // RSPDuo stream A
   SpecData *stream_a_data;
 
@@ -30,7 +34,7 @@ public:
   int n_range;
 
   // ambiguity surface
-  std::vector<std::vector<double>> ambiguity;
+  std::vector<double> ambiguity;
 
   /*
    * Constructor for RadarData class
@@ -51,15 +55,7 @@ public:
   /*
    * Calculates ambiguity surface between receivers.
    */
-  void process_ambiguity();
-
-  /*
-   * Plots live ambiguity
-   *
-   * @param exit_flag Pointer to atomic<bool> flag set to true when user ends
-   * program.
-   */
-  void plot_ambiguity(std::atomic<bool> *exit_flag);
+  void process_ambiguity(std::atomic<bool> *exit_flag);
 
 private:
   // Copied data samples

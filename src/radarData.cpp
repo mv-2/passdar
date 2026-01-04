@@ -1,8 +1,6 @@
 #include <GL/gl.h>
 #include <GLFW/glfw3.h>
-#include <cmath>
 #include <complex.h>
-#include <cstdlib>
 #include <vector>
 
 #include "../external/imgui/backends/imgui_impl_glfw.h"
@@ -38,20 +36,20 @@ RadarData::RadarData(Config cfg, SpecData *_stream_a_data,
   n_range = static_cast<int>(cfg.process_cfg.max_range / range_step);
 
   // preallocate ambiguity
-  std::vector<std::vector<double>> amb(n_speed, std::vector<double>(n_range));
-  ambiguity = amb;
+  ambiguity.resize(n_range * n_speed);
+
+  // data copy preallocations
+  data_a_copy.resize(cfg.process_cfg.buffer_size);
+  data_b_copy.resize(cfg.process_cfg.buffer_size);
 }
 
 void RadarData::plot_spectra(std::atomic<bool> *exit_flag) {
-  // Get axes limits
-  double f_min = stream_a_data->frequency.front();
-  double f_max = stream_a_data->frequency.back();
-  std::cout << "F_MIN: " << f_min << std::endl;
-
   // GLFW Window Initialisation
   if (!glfwInit()) {
     return;
   }
+
+  std::vector<double> ambiguity_copy(n_range * n_speed, 0.0);
 
   // Set GLSL Version
   const char *glsl_version = "#version 130";
@@ -63,10 +61,11 @@ void RadarData::plot_spectra(std::atomic<bool> *exit_flag) {
       ImGui_ImplGlfw_GetContentScaleForMonitor(glfwGetPrimaryMonitor());
   GLFWwindow *window =
       glfwCreateWindow((int)(1280 * main_scale), (int)(800 * main_scale),
-                       "Test Window", nullptr, nullptr);
+                       "passdar", nullptr, nullptr);
   if (window == nullptr) {
     return;
   }
+  glfwMaximizeWindow(window);
   glfwMakeContextCurrent(window);
   glfwSwapInterval(1);
 
@@ -100,6 +99,9 @@ void RadarData::plot_spectra(std::atomic<bool> *exit_flag) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
+    const ImGuiViewport *viewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(viewport->Pos);
+    ImGui::SetNextWindowSize(viewport->Size);
     ImGui::Begin("Spectra");
 
     // Tab bar of relevant plots
@@ -132,8 +134,22 @@ void RadarData::plot_spectra(std::atomic<bool> *exit_flag) {
         }
         ImGui::EndTabItem();
       }
+      // Range - Doppler heatmap tab
       if (ImGui::BeginTabItem("Range - Doppler")) {
-        ImGui::Text("To be populated ...");
+        // Range - Doppler plot
+        if (ImPlot::BeginPlot("Range - Doppler", ImVec2(-1, -1))) {
+          ImPlot::SetupAxes("Speed [m/s]", "Range [m]");
+          if (ambiguity_mutex.try_lock()) {
+            ImPlot::PlotHeatmap("Range - Doppler", ambiguity.data(), n_speed,
+                                n_range, 0, 0, NULL);
+            ambiguity_copy = ambiguity;
+            ambiguity_mutex.unlock();
+          } else {
+            ImPlot::PlotHeatmap("Range - Doppler", ambiguity_copy.data(),
+                                n_speed, n_range, 0, 0, NULL);
+          }
+          ImPlot::EndPlot();
+        }
         ImGui::EndTabItem();
       }
       ImGui::EndTabBar();
@@ -163,52 +179,38 @@ void RadarData::plot_spectra(std::atomic<bool> *exit_flag) {
   return;
 }
 
-void RadarData::process_ambiguity() {
-  // WB ambiguity time scale factor
-  double time_scale;
-
-  // Temp value for integration
+void RadarData::process_ambiguity(std::atomic<bool> *exit_flag) {
+  // Temp value for storing integral
   std::complex<double> int_temp;
 
-  // delay offset
-  unsigned int sample_index;
-
-  // Copy samples out of data streams
-  stream_a_data->data_iq->mutex_lock.lock();
-  stream_b_data->data_iq->mutex_lock.lock();
-  for (int i = 0; i < stream_b_data->max_length; i++) {
-    data_a_copy[i] = stream_a_data->data_iq->samples.at(i);
-    data_b_copy[i] = stream_b_data->data_iq->samples.at(i);
-  }
-  stream_a_data->data_iq->mutex_lock.unlock();
-  stream_b_data->data_iq->mutex_lock.unlock();
-
-  // Calculate ambiguity surface
-  for (int v_id = -n_speed / 2; v_id < n_speed / 2; v_id++) {
-    time_scale = (PHASE_VELOCITY + v_id * speed_step) /
-                 (PHASE_VELOCITY - v_id * speed_step);
-    for (int r_id = -n_range / 2; r_id < n_range / 2; r_id++) {
-      int_temp = 0.0;
-      for (int i = 0; i < data_a_copy.size(); i++) {
-        sample_index = static_cast<unsigned int>(time_scale * (i - r_id));
-        int_temp =
-            int_temp + data_a_copy[i] * std::conj(data_b_copy[sample_index]);
-      }
-      int_temp = std::sqrt(std::abs(time_scale)) * int_temp /
-                 static_cast<double>(sample_frequency);
-      ambiguity[v_id][r_id] = std::abs(int_temp);
-    }
-  }
-}
-
-void RadarData::plot_ambiguity(std::atomic<bool> *exit_flag) {
-  // Initialise plot window
-  FILE *plot_pipe = popen("gnuplot -persist", "w");
-
-  while (!(exit_flag->load())) {
+  while (!exit_flag->load()) {
+    // await next sample block
     sleep(1);
 
-    // Calculate ambiguity surface
-    process_ambiguity();
+    // lock iqdata and copy samples
+    stream_a_data->data_iq->mutex_lock.lock();
+    stream_b_data->data_iq->mutex_lock.lock();
+    for (unsigned int i = 0; i < data_a_copy.size(); i++) {
+      data_a_copy[i] = stream_a_data->data_iq->samples[i];
+      data_b_copy[i] = stream_b_data->data_iq->samples[i];
+    }
+    stream_a_data->data_iq->mutex_lock.unlock();
+    stream_b_data->data_iq->mutex_lock.unlock();
+
+    // Calculate ambiguity
+    ambiguity_mutex.lock();
+    for (int v_id = 0; v_id < n_speed; v_id++) {
+      for (int r_id = 0; r_id < n_range; r_id++) {
+        int_temp = 0.0;
+        for (unsigned int i = 0; i < (data_a_copy.size() - n_range); i++) {
+          int_temp +=
+              data_a_copy[i + r_id] * std::conj(data_b_copy[i]) *
+              std::polar(1.0, -2 * r_id * M_PI * i / data_a_copy.size());
+        }
+        ambiguity[v_id * n_range + r_id] =
+            std::abs(int_temp) / data_a_copy.size();
+      }
+    }
+    ambiguity_mutex.unlock();
   }
 }

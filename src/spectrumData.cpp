@@ -56,14 +56,14 @@ void SpecData::calc_dft() {
   fftw_execute(fft_plan);
 }
 
-void SpecData::process_data(std::atomic<bool> *exit_flag) {
+void SpecData::process_spectrum(std::atomic<bool> *exit_flag) {
   while (!exit_flag->load()) {
     // Lock mutex for SpecData so plotting thread does not read spectrum during
     // FFTW process. Perform FFTshift on assignment
     int id_swap;
     mutex_lock.lock();
     calc_dft();
-    for (int i = 0; i < max_length; i++) {
+    for (unsigned int i = 0; i < max_length; i++) {
       id_swap = (i + max_length / 2 - 1) % max_length;
       spectrum[i] = 20.0 * log10(std::sqrt(spectrum_internal[id_swap][0] *
                                                spectrum_internal[id_swap][0] +

@@ -7,7 +7,7 @@
     "gRdB_A": 40,
     "gRdB_B": 40,
     "lna_state": 7,
-    "dec_factor": 1,
+    "dec_factor": 16,
     "ifType": "sdrplay_api_IF_1_620",
     "bwType": "sdrplay_api_BW_8_000",
     "loType": "sdrplay_api_LO_Auto",

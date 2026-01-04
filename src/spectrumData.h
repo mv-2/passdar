@@ -1,7 +1,6 @@
 #ifndef SPECTRUMDATA_H
 #define SPECTRUMDATA_H
 
-#include <complex>
 #include <fftw3.h>
 #include <jsoncpp/json/json.h>
 #include <mutex>
@@ -45,7 +44,7 @@ public:
    * @param exit_flag Pointer to atomic<bool> flag denoting user request to end
    * program.
    */
-  void process_data(std::atomic<bool> *exit_flag);
+  void process_spectrum(std::atomic<bool> *exit_flag);
 
   /*
    * Updates sample buffer with most recent samples from USB packet

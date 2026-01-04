@@ -2,8 +2,6 @@
 #define CFGINTERFACE_H
 
 #include <cstdint>
-#include <fstream>
-#include <iostream>
 #include <jsoncpp/json/json.h>
 #include <jsoncpp/json/value.h>
 #include <sdrplay_api.h>

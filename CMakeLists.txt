@@ -3,7 +3,7 @@ project(passdar)
 set(CMAKE_CXX_STANDARD 23)
 
 # Comppile options
-add_compile_options(-O3 -Wpedantic -Werror)
+add_compile_options(-O3 -Wall -Wextra -pedantic-errors)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "")
 
 # Project source files

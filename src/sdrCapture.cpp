@@ -97,7 +97,6 @@ void Receiver::initialise() {
 }
 
 void Receiver::get_device() {
-  unsigned int i;
   unsigned int ndev;
   unsigned int chosenIdx = 0;
 
@@ -269,20 +268,20 @@ void Receiver::run_capture(SpecData *_stream_a_data, SpecData *_stream_b_data,
   return;
 }
 
-void Receiver::stream_a_callback(short *xi, short *xq,
-                                 sdrplay_api_StreamCbParamsT *params,
-                                 unsigned int numSamples, unsigned int reset,
-                                 void *cbContext) {
+void Receiver::stream_a_callback(
+    short *xi, short *xq, [[maybe_unused]] sdrplay_api_StreamCbParamsT *params,
+    [[maybe_unused]] unsigned int numSamples,
+    [[maybe_unused]] unsigned int reset, [[maybe_unused]] void *cbContext) {
   // Update data
   stream_a_data->update_data(xi, xq, numSamples);
 
   return;
 }
 
-void Receiver::stream_b_callback(short *xi, short *xq,
-                                 sdrplay_api_StreamCbParamsT *params,
-                                 unsigned int numSamples, unsigned int reset,
-                                 void *cbContext) {
+void Receiver::stream_b_callback(
+    short *xi, short *xq, [[maybe_unused]] sdrplay_api_StreamCbParamsT *params,
+    [[maybe_unused]] unsigned int numSamples,
+    [[maybe_unused]] unsigned int reset, [[maybe_unused]] void *cbContext) {
   // Update data
   stream_b_data->update_data(xi, xq, numSamples);
 
@@ -292,7 +291,7 @@ void Receiver::stream_b_callback(short *xi, short *xq,
 void Receiver::event_callback(sdrplay_api_EventT eventId,
                               sdrplay_api_TunerSelectT tuner,
                               sdrplay_api_EventParamsT *params,
-                              void *cbContext) {
+                              [[maybe_unused]] void *cbContext) {
   // Function from SDRplay provided example
   switch (eventId) {
   case sdrplay_api_GainChange:
@@ -303,6 +302,7 @@ void Receiver::event_callback(sdrplay_api_EventT eventId,
                                           : "sdrplay_api_Tuner_B",
            params->gainParams.gRdB, params->gainParams.lnaGRdB,
            params->gainParams.currGain);
+    break;
   case sdrplay_api_PowerOverloadChange:
     printf("sdrplay_api_PowerOverloadChange: tuner=%s "
            "powerOverloadChangeType=%s\n",

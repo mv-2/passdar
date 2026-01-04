@@ -1,3 +1,5 @@
+#include <fstream>
+#include <iostream>
 #include <jsoncpp/json/reader.h>
 #include <jsoncpp/json/value.h>
 #include <sdrplay_api_tuner.h>
@@ -98,7 +100,7 @@ ProcessConfig::ProcessConfig() {
   max_speed = 0.0;
 }
 
-Config::Config(std::string cfg_path) : process_cfg(), receiver_cfg() {
+Config::Config(std::string cfg_path) : receiver_cfg(), process_cfg() {
   Json::Value json_cfg = cfgInterface::load_config(cfg_path);
   receiver_cfg = ReceiverConfig(json_cfg["receiver"]);
   process_cfg = ProcessConfig(json_cfg["processing"]);

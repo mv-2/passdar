@@ -70,8 +70,11 @@ int main(int argc, char *argv[]) {
       [&] { receiver->run_capture(stream_a_data, stream_b_data, &exit_flag); });
 
   // Processing threads
-  std::thread processThread_A([&] { stream_a_data->process_data(&exit_flag); });
-  std::thread processThread_B([&] { stream_b_data->process_data(&exit_flag); });
+  std::thread spectrumThread_A(
+      [&] { stream_a_data->process_spectrum(&exit_flag); });
+  std::thread spectrumThread_B(
+      [&] { stream_b_data->process_spectrum(&exit_flag); });
+  std::thread ambiguity([&] { radar_data->process_ambiguity(&exit_flag); });
 
   // Plotting thread
   std::thread plotThread([&] { radar_data->plot_spectra(&exit_flag); });
@@ -86,8 +89,9 @@ int main(int argc, char *argv[]) {
 
   // Join threads to end processes. Changing order results in seg fault
   plotThread.join();
-  processThread_A.join();
-  processThread_B.join();
+  ambiguity.join();
+  spectrumThread_A.join();
+  spectrumThread_B.join();
   captureThread.join();
 
   return 0;
