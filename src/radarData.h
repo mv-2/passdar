@@ -7,6 +7,7 @@
 
 #include "cfgInterface.h"
 #include "spectrumData.h"
+
 /*
  * Stores data of both streams required for RADAR processing
  */
@@ -43,14 +44,6 @@ public:
    * @param stream_B_data Pointer to SpecData object for stream B
    */
   RadarData(Config cfg, SpecData *stream_a_data, SpecData *stream_b_data);
-
-  /*
-   * Plots live spectra comparison of stream A and B using GNUPLOT
-   *
-   * @param exit_flag Pointer to atomic<bool> flag set to true when user ends
-   * program.
-   */
-  void plot_spectra(std::atomic<bool> *exit_flag);
 
   /*
    * Calculates ambiguity surface between receivers.

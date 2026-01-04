@@ -9,6 +9,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "")
 # Project source files
 set(SOURCES
   src/main.cpp
+  src/radarApp.cpp
   src/cfgInterface.cpp
   src/radarData.cpp
   src/receiverIq.cpp

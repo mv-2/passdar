@@ -105,3 +105,8 @@ Config::Config(std::string cfg_path) : receiver_cfg(), process_cfg() {
   receiver_cfg = ReceiverConfig(json_cfg["receiver"]);
   process_cfg = ProcessConfig(json_cfg["processing"]);
 }
+
+Config::Config() : receiver_cfg(), process_cfg() {
+  receiver_cfg = ReceiverConfig();
+  process_cfg = ProcessConfig();
+}

@@ -78,5 +78,6 @@ struct Config {
   ProcessConfig process_cfg;
 
   Config(std::string cfg_path);
+  Config();
 };
 #endif
