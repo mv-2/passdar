@@ -86,6 +86,12 @@ void RadarApp::run() {
   std::vector<double> ambiguity_copy(radar_data->n_range * radar_data->n_speed);
   bool show_window = true;
 
+  // Heatmap parameters
+  ImPlotHeatmapFlags hm_flags = ImPlotHeatmapFlags_ColMajor;
+  auto hm_bound_min = ImVec2(-cfg.process_cfg.max_speed, 0);
+  auto hm_bound_max =
+      ImVec2(cfg.process_cfg.max_speed, cfg.process_cfg.max_range);
+
   while (show_window && !glfwWindowShouldClose(window)) {
     glfwPollEvents();
 
@@ -135,13 +141,13 @@ void RadarApp::run() {
           if (radar_data->ambiguity_mutex.try_lock()) {
             ImPlot::PlotHeatmap("Range - Doppler", radar_data->ambiguity.data(),
                                 radar_data->n_speed, radar_data->n_range, 0, 0,
-                                NULL);
+                                NULL, hm_bound_min, hm_bound_max, hm_flags);
             ambiguity_copy = radar_data->ambiguity;
             radar_data->ambiguity_mutex.unlock();
           } else {
             ImPlot::PlotHeatmap("Range - Doppler", ambiguity_copy.data(),
                                 radar_data->n_speed, radar_data->n_range, 0, 0,
-                                NULL);
+                                NULL, hm_bound_min, hm_bound_max, hm_flags);
           }
           ImPlot::EndPlot();
         }

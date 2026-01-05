@@ -1,10 +1,14 @@
 #include <GL/gl.h>
 #include <GLFW/glfw3.h>
 #include <complex.h>
+#include <thread>
 #include <vector>
 
 #include "cfgInterface.h"
 #include "radarData.h"
+
+// Number of available threads for ambiguity calculation
+const int NUM_THREADS = 10;
 
 // Wave propagation velocity
 const double PHASE_VELOCITY = 3e8;
@@ -39,9 +43,28 @@ RadarData::RadarData(Config cfg, SpecData *_stream_a_data,
   data_b_copy.resize(cfg.process_cfg.buffer_size);
 }
 
-void RadarData::process_ambiguity(std::atomic<bool> *exit_flag) {
-  // Temp value for storing integral
+void RadarData::ambiguity_thread_calc(int first_row, int last_row) {
+  // Temp value to accumulate integral
   std::complex<double> int_temp;
+
+  // Ambiguity calculation
+  for (int v_id = first_row; v_id < last_row; v_id++) {
+    for (int r_id = 0; r_id < n_range; r_id++) {
+      int_temp = 0.0;
+      for (unsigned int i = 0; i < (data_a_copy.size() - n_range); i++) {
+        int_temp += data_a_copy[i + r_id] * std::conj(data_b_copy[i]) *
+                    std::polar(1.0, -2 * r_id * M_PI * i / data_a_copy.size());
+      }
+      ambiguity[v_id * n_range + r_id] =
+          std::abs(int_temp) / data_a_copy.size();
+    }
+  }
+}
+
+void RadarData::process_ambiguity(std::atomic<bool> *exit_flag) {
+  // Initialise processing threads
+  std::thread amb_threads[NUM_THREADS];
+  int first_row, last_row;
 
   while (!exit_flag->load()) {
     // await next sample block
@@ -59,17 +82,17 @@ void RadarData::process_ambiguity(std::atomic<bool> *exit_flag) {
 
     // Calculate ambiguity
     ambiguity_mutex.lock();
-    for (int v_id = 0; v_id < n_speed; v_id++) {
-      for (int r_id = 0; r_id < n_range; r_id++) {
-        int_temp = 0.0;
-        for (unsigned int i = 0; i < (data_a_copy.size() - n_range); i++) {
-          int_temp +=
-              data_a_copy[i + r_id] * std::conj(data_b_copy[i]) *
-              std::polar(1.0, -2 * r_id * M_PI * i / data_a_copy.size());
-        }
-        ambiguity[v_id * n_range + r_id] =
-            std::abs(int_temp) / data_a_copy.size();
-      }
+    for (int i = 0; i < NUM_THREADS; i++) {
+      // ternary used here is ugly but effective
+      first_row = i * n_speed / NUM_THREADS;
+      last_row = (i == (NUM_THREADS - 1)) ? n_speed + 1
+                                          : (i + 1) * n_speed / NUM_THREADS;
+      amb_threads[i] =
+          std::thread([&] { ambiguity_thread_calc(first_row, last_row); });
+    }
+    // Join threads to close
+    for (int i = 0; i < NUM_THREADS; i++) {
+      amb_threads[i].join();
     }
     ambiguity_mutex.unlock();
   }

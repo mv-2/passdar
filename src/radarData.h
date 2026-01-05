@@ -57,5 +57,10 @@ private:
 
   // sample frequency
   unsigned int sample_frequency;
+
+  /*
+   * Calculates ambiguity surface over narrowed region.
+   */
+  void ambiguity_thread_calc(int first_row, int last_row);
 };
 #endif
