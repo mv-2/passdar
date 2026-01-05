@@ -6,6 +6,7 @@
 
 #include "../external/imgui/backends/imgui_impl_glfw.h"
 #include "../external/imgui/backends/imgui_impl_opengl3.h"
+#include "cfgInterface.h"
 #include "imgui.h"
 #include "implot.h"
 #include "radarApp.h"
@@ -16,6 +17,7 @@ RadarApp::RadarApp(Config _cfg) {
   stream_a_data = new SpecData(_cfg);
   stream_b_data = new SpecData(_cfg);
   radar_data = new RadarData(_cfg, stream_a_data, stream_b_data);
+  cfg = _cfg;
 }
 
 GLFWwindow *RadarApp::init_window() {
@@ -94,9 +96,9 @@ void RadarApp::run() {
     const ImGuiViewport *viewport = ImGui::GetMainViewport();
     ImGui::SetNextWindowPos(viewport->Pos);
     ImGui::SetNextWindowSize(viewport->Size);
-    ImGui::Begin("Receiver Spectra", &show_window);
+    ImGui::Begin("Passdar", &show_window);
 
-    if (ImGui::BeginTabBar("Data Plots")) {
+    if (ImGui::BeginTabBar("Passdar")) {
       // Receiver spectra tab
       if (ImGui::BeginTabItem("Receiver Spectra")) {
         // Receiver subplots
@@ -217,7 +219,8 @@ void RadarApp::run() {
           ImGui::TableNextColumn();
           ImGui::Text("IF");
           ImGui::TableNextColumn();
-          ImGui::Text("TBD");
+          ImGui::Text("%d kHz",
+                      cfgInterface::ifNum_map.at(cfg.receiver_cfg.ifType));
 
           // TODO: FIX THIS
           // BW type
@@ -225,7 +228,8 @@ void RadarApp::run() {
           ImGui::TableNextColumn();
           ImGui::Text("Bandwidth");
           ImGui::TableNextColumn();
-          ImGui::Text("TBD");
+          ImGui::Text("%d MHz",
+                      cfgInterface::bwNum_map.at(cfg.receiver_cfg.bwType));
 
           // TODO: FIX THIS
           // LO type
@@ -233,23 +237,25 @@ void RadarApp::run() {
           ImGui::TableNextColumn();
           ImGui::Text("LO");
           ImGui::TableNextColumn();
-          ImGui::Text("TBD");
+          ImGui::Text(
+              "%s MHz",
+              cfgInterface::loStr_map.at(cfg.receiver_cfg.loType).c_str());
 
           // RF Notch
           ImGui::TableNextRow();
           ImGui::TableNextColumn();
           ImGui::Text("RF Notch Filter");
           ImGui::TableNextColumn();
-          ImGui::Text("%s", cfg.receiver_cfg.rf_notch_enable ? "enabled"
-                                                             : "disabled");
+          ImGui::Text("%s", cfg.receiver_cfg.rf_notch_enable ? "Enabled"
+                                                             : "Disabled");
 
           // DAB Notch
           ImGui::TableNextRow();
           ImGui::TableNextColumn();
           ImGui::Text("DAB Notch Filter");
           ImGui::TableNextColumn();
-          ImGui::Text("%s", cfg.receiver_cfg.dab_notch_enable ? "enabled"
-                                                              : "disabled");
+          ImGui::Text("%s", cfg.receiver_cfg.dab_notch_enable ? "Enabled"
+                                                              : "Disabled");
           ImGui::EndTable();
         }
         if (ImGui::BeginTable("Processing Settings", 2, table_flags)) {

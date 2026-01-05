@@ -17,12 +17,22 @@ public:
   /*
    * unordered_map containing string to enum mappings for all IF values
    */
-  static const std::unordered_map<std::string, sdrplay_api_If_kHzT> ifType_map;
+  static const std::unordered_map<int, sdrplay_api_If_kHzT> ifType_map;
+
+  /*
+   * unordered_map containing IF value to int mappings
+   */
+  static const std::unordered_map<sdrplay_api_If_kHzT, int> ifNum_map;
 
   /*
    * unordered_map containing string to enum mappings for all BW values
    */
-  static const std::unordered_map<std::string, sdrplay_api_Bw_MHzT> bwType_map;
+  static const std::unordered_map<int, sdrplay_api_Bw_MHzT> bwType_map;
+
+  /*
+   * unordered_map containing BW Value to int mappings
+   */
+  static const std::unordered_map<sdrplay_api_Bw_MHzT, int> bwNum_map;
 
   /*
    * unordered_map containing string to enum mappings for all LO values
@@ -30,9 +40,18 @@ public:
   static const std::unordered_map<std::string, sdrplay_api_LoModeT> loType_map;
 
   /*
+   * unordered_map containing LO Value to string mappings
+   */
+  static const std::unordered_map<sdrplay_api_LoModeT, std::string> loStr_map;
+
+  /*
    * Static method to read config to Json::Value
    */
   static Json::Value load_config(std::string cfg_path);
+
+  /*
+   * Static method to read config to Json::Value
+   */
 };
 
 /*

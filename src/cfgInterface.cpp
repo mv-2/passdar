@@ -3,36 +3,49 @@
 #include <jsoncpp/json/reader.h>
 #include <jsoncpp/json/value.h>
 #include <sdrplay_api_tuner.h>
+#include <unordered_map>
 
 #include "cfgInterface.h"
 
-const std::unordered_map<std::string, sdrplay_api_If_kHzT>
-    cfgInterface::ifType_map = {
-        {"sdrplay_api_IF_Undefined", sdrplay_api_IF_Undefined},
-        {"sdrplay_api_IF_Zero", sdrplay_api_IF_Zero},
-        {"sdrplay_api_IF_0_450", sdrplay_api_IF_0_450},
-        {"sdrplay_api_IF_1_620", sdrplay_api_IF_1_620},
-        {"sdrplay_api_IF_2_048", sdrplay_api_IF_2_048}};
+template <typename T1, typename T2>
+constexpr std::unordered_map<T2, T1>
+reverse_map(std::unordered_map<T1, T2> fwd_map) {
+  std::unordered_map<T2, T1> rev_map;
+  for (const auto &pair : fwd_map) {
+    rev_map[pair.second] = pair.first;
+  }
+  return rev_map;
+}
 
-const std::unordered_map<std::string, sdrplay_api_Bw_MHzT>
-    cfgInterface::bwType_map = {
-        {"sdrplay_api_BW_Undefined", sdrplay_api_BW_Undefined},
-        {"sdrplay_api_BW_0_200", sdrplay_api_BW_0_200},
-        {"sdrplay_api_BW_0_300", sdrplay_api_BW_0_300},
-        {"sdrplay_api_BW_0_600", sdrplay_api_BW_0_600},
-        {"sdrplay_api_BW_1_536", sdrplay_api_BW_1_536},
-        {"sdrplay_api_BW_5_000", sdrplay_api_BW_5_000},
-        {"sdrplay_api_BW_6_000", sdrplay_api_BW_6_000},
-        {"sdrplay_api_BW_7_000", sdrplay_api_BW_7_000},
-        {"sdrplay_api_BW_8_000", sdrplay_api_BW_8_000}};
+const std::unordered_map<int, sdrplay_api_If_kHzT> cfgInterface::ifType_map = {
+    {-1, sdrplay_api_IF_Undefined},
+    {0, sdrplay_api_IF_Zero},
+    {450, sdrplay_api_IF_0_450},
+    {1620, sdrplay_api_IF_1_620},
+    {2048, sdrplay_api_IF_2_048}};
+
+const std::unordered_map<sdrplay_api_If_kHzT, int> cfgInterface::ifNum_map =
+    reverse_map(cfgInterface::ifType_map);
+
+const std::unordered_map<int, sdrplay_api_Bw_MHzT> cfgInterface::bwType_map = {
+    {-1, sdrplay_api_BW_Undefined}, {200, sdrplay_api_BW_0_200},
+    {300, sdrplay_api_BW_0_300},    {600, sdrplay_api_BW_0_600},
+    {1536, sdrplay_api_BW_1_536},   {5000, sdrplay_api_BW_5_000},
+    {6000, sdrplay_api_BW_6_000},   {7000, sdrplay_api_BW_7_000},
+    {8000, sdrplay_api_BW_8_000}};
+
+const std::unordered_map<sdrplay_api_Bw_MHzT, int> cfgInterface::bwNum_map =
+    reverse_map(cfgInterface::bwType_map);
 
 const std::unordered_map<std::string, sdrplay_api_LoModeT>
-    cfgInterface::loType_map = {
-        {"sdrplay_api_LO_Undefined", sdrplay_api_LO_Undefined},
-        {"sdrplay_api_LO_Auto", sdrplay_api_LO_Auto},
-        {"sdrplay_api_LO_120MHz", sdrplay_api_LO_120MHz},
-        {"sdrplay_api_LO_144MHz", sdrplay_api_LO_144MHz},
-        {"sdrplay_api_LO_168MHz", sdrplay_api_LO_168MHz}};
+    cfgInterface::loType_map = {{"-1", sdrplay_api_LO_Undefined},
+                                {"Auto", sdrplay_api_LO_Auto},
+                                {"120", sdrplay_api_LO_120MHz},
+                                {"144", sdrplay_api_LO_144MHz},
+                                {"168", sdrplay_api_LO_168MHz}};
+
+const std::unordered_map<sdrplay_api_LoModeT, std::string>
+    cfgInterface::loStr_map = reverse_map(cfgInterface::loType_map);
 
 Json::Value cfgInterface::load_config(std::string cfg_path) {
   Json::Value root;
@@ -63,9 +76,9 @@ ReceiverConfig::ReceiverConfig(Json::Value json_rcv) {
   gRdB_B = json_rcv["gRdB_B"].asInt();
   lna_state = json_rcv["lna_state"].asInt();
   dec_factor = json_rcv["dec_factor"].asInt();
-  ifType = cfgInterface::ifType_map.at(json_rcv["ifType"].asString());
-  bwType = cfgInterface::bwType_map.at(json_rcv["bwType"].asString());
-  loType = cfgInterface::loType_map.at(json_rcv["loType"].asString());
+  ifType = cfgInterface::ifType_map.at(json_rcv["if_kHz"].asInt());
+  bwType = cfgInterface::bwType_map.at(json_rcv["bw_MHz"].asInt());
+  loType = cfgInterface::loType_map.at(json_rcv["lo_MHz"].asString());
   rf_notch_enable = json_rcv["rf_notch_enable"].asBool();
   dab_notch_enable = json_rcv["dab_notch_enable"].asBool();
 }
