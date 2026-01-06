@@ -10,6 +10,8 @@
 #include <unistd.h>
 
 #include "cfgInterface.h"
+#include "imgui.h"
+#include "implot.h"
 #include "radarData.h"
 #include "sdrCapture.h"
 
@@ -58,7 +60,14 @@ private:
   // Create ImGui window
   GLFWwindow *init_window(void);
 
+  // Update window
+  void update_window(GLFWwindow *window, bool *show_window, ImVec2 hm_bound_min,
+                     ImVec2 hm_bound_max, ImPlotHeatmapFlags hm_flags);
+
   // Config
   Config cfg;
+
+  // Ambiguity copy for keeping window updated
+  std::vector<double> ambiguity_copy;
 };
 #endif
