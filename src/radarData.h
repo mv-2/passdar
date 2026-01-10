@@ -61,6 +61,6 @@ private:
   /*
    * Calculates ambiguity surface over narrowed region.
    */
-  void ambiguity_thread_calc(int first_row, int last_row);
+  void ambiguity_thread_calc(int first_col, int last_col);
 };
 #endif

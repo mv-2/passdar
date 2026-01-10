@@ -12,6 +12,10 @@
 #include "radarApp.h"
 #include "sdrCapture.h"
 
+const ImVec4 SPECTRUM_LINE_COLOUR = ImVec4(0.2f, 1.0f, 0.6f, 1.0f);
+const ImPlotColormap AMBIGUITY_COLOUR_MAP = ImPlotColormap_Jet;
+const int COLOURBAR_WIDTH = 100;
+
 RadarApp::RadarApp(Config _cfg) {
   receiver = new Receiver(_cfg.receiver_cfg);
   stream_a_data = new SpecData(_cfg);
@@ -34,7 +38,7 @@ GLFWwindow *RadarApp::init_window() {
   glfwWindowHint(GLFW_DECORATED, 1);
   GLFWwindow *window = glfwCreateWindow(1, 1, "passdar", nullptr, nullptr);
   if (window == nullptr) {
-    return window;
+    return nullptr;
   }
   glfwMaximizeWindow(window);
   glfwMakeContextCurrent(window);
@@ -59,7 +63,7 @@ GLFWwindow *RadarApp::init_window() {
   ImPlot::CreateContext();
   ImGui_ImplGlfw_InitForOpenGL(window, true);
   ImGui_ImplOpenGL3_Init(glsl_version);
-  ImPlot::GetStyle().Colormap = ImPlotColormap_Jet;
+  ImPlot::GetStyle().Colormap = AMBIGUITY_COLOUR_MAP;
 
   return window;
 }
@@ -89,7 +93,6 @@ void RadarApp::run() {
   bool show_window = true;
 
   // Heatmap parameters
-  // ImPlotHeatmapFlags hm_flags = ImPlotHeatmapFlags_ColMajor;
   ImPlotHeatmapFlags hm_flags = 0;
   ImVec2 hm_bound_min = ImVec2(-cfg.process_cfg.max_speed, 0);
   ImVec2 hm_bound_max =
@@ -129,11 +132,17 @@ void RadarApp::update_window(GLFWwindow *window, bool *show_window,
   ImGui::SetNextWindowSize(viewport->Size);
   ImGui::Begin("Passdar", show_window);
 
+  int heatmap_width = ImGui::GetContentRegionAvail().x - COLOURBAR_WIDTH -
+                      ImGui::GetStyle().ItemSpacing.x;
+
+  // Tab bar to select each function
   if (ImGui::BeginTabBar("Passdar")) {
     // Receiver spectra tab
     if (ImGui::BeginTabItem("Receiver Spectra")) {
       // Receiver subplots
       if (ImPlot::BeginSubplots("Receiver Spectra", 2, 1, ImVec2(-1, -1))) {
+        // Set line colour separate to heatmap style
+        ImPlot::PushStyleColor(ImPlotCol_Line, SPECTRUM_LINE_COLOUR);
         // Receiver A plot
         if (ImPlot::BeginPlot("Receiver A")) {
           ImPlot::SetupAxes("Frequency [kHz]", "Amplitude [dB]");
@@ -154,6 +163,7 @@ void RadarApp::update_window(GLFWwindow *window, bool *show_window,
           stream_b_data->mutex_lock.unlock();
           ImPlot::EndPlot();
         }
+        ImPlot::PopStyleColor();
         ImPlot::EndSubplots();
       }
       ImGui::EndTabItem();
@@ -161,21 +171,30 @@ void RadarApp::update_window(GLFWwindow *window, bool *show_window,
     // Range - Doppler heatmap tab
     if (ImGui::BeginTabItem("Range - Doppler")) {
       // Range - Doppler plot
-      if (ImPlot::BeginPlot("Range - Doppler", ImVec2(-1, -1))) {
+
+      // Set heatmap style
+      ImPlot::PushColormap(AMBIGUITY_COLOUR_MAP);
+      if (ImPlot::BeginPlot("Range - Doppler", ImVec2(heatmap_width, -1))) {
         ImPlot::SetupAxes("Speed [m/s]", "Range [m]");
+        // Set ambiguity to latest data if available
         if (radar_data->ambiguity_mutex.try_lock()) {
-          ImPlot::PlotHeatmap("Range - Doppler", radar_data->ambiguity.data(),
-                              radar_data->n_speed, radar_data->n_range, 0, 0,
-                              NULL, hm_bound_min, hm_bound_max, hm_flags);
           ambiguity_copy = radar_data->ambiguity;
           radar_data->ambiguity_mutex.unlock();
-        } else {
-          ImPlot::PlotHeatmap("Range - Doppler", ambiguity_copy.data(),
-                              radar_data->n_speed, radar_data->n_range, 0, 0,
-                              NULL, hm_bound_min, hm_bound_max, hm_flags);
         }
+        // Plot ambiguity copy
+        ImPlot::PlotHeatmap("Range - Doppler", ambiguity_copy.data(),
+                            radar_data->n_range, radar_data->n_speed, 0, 0,
+                            NULL, hm_bound_min, hm_bound_max, hm_flags);
         ImPlot::EndPlot();
       }
+
+      // Display Colorbar
+      ImGui::SameLine();
+      ImPlot::ColormapScale("Ambiguity [dB]", 0.0f, 70.0f, ImVec2(-1, -1));
+
+      // Pop style stack
+      ImPlot::PopColormap();
+
       ImGui::EndTabItem();
     }
     // Config settings tab

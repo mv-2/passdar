@@ -7,7 +7,7 @@
     "gRdB_A": 40,
     "gRdB_B": 40,
     "lna_state": 7,
-    "dec_factor": 16,
+    "dec_factor": 8,
     "if_kHz": 0,
     "bw_MHz": 8000,
     "lo_MHz": "Auto",
@@ -16,7 +16,7 @@
   },
   "processing": {
     "buffer_size": 4000,
-    "speed_step": 1,
+    "speed_step": 10,
     "max_range": 30000,
     "max_speed": 330
   }
