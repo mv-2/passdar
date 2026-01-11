@@ -168,6 +168,7 @@ void RadarApp::update_window(GLFWwindow *window, bool *show_window,
       }
       ImGui::EndTabItem();
     }
+
     // Range - Doppler heatmap tab
     if (ImGui::BeginTabItem("Range - Doppler")) {
       // Range - Doppler plot
@@ -197,6 +198,7 @@ void RadarApp::update_window(GLFWwindow *window, bool *show_window,
 
       ImGui::EndTabItem();
     }
+
     // Config settings tab
     if (ImGui::BeginTabItem("Settings")) {
       // Config settings
@@ -263,7 +265,6 @@ void RadarApp::update_window(GLFWwindow *window, bool *show_window,
         ImGui::TableNextColumn();
         ImGui::Text("%d", cfg.receiver_cfg.dec_factor);
 
-        // TODO: FIX THIS
         // IF type
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
@@ -272,7 +273,6 @@ void RadarApp::update_window(GLFWwindow *window, bool *show_window,
         ImGui::Text("%d kHz",
                     cfgInterface::ifNum_map.at(cfg.receiver_cfg.ifType));
 
-        // TODO: FIX THIS
         // BW type
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
@@ -281,7 +281,6 @@ void RadarApp::update_window(GLFWwindow *window, bool *show_window,
         ImGui::Text("%d MHz",
                     cfgInterface::bwNum_map.at(cfg.receiver_cfg.bwType));
 
-        // TODO: FIX THIS
         // LO type
         ImGui::TableNextRow();
         ImGui::TableNextColumn();

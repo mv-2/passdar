@@ -12,6 +12,7 @@ const std::unordered_map<std::string, double> SpecData::bwNumMap = {
     {"sdrplay_api_BW_7_000", 7000.0}, {"sdrplay_api_BW_8_000", 8000.0}};
 
 SpecData::SpecData(Config cfg) {
+  // TODO: CHECK MATHS
   max_length = cfg.process_cfg.buffer_size;
   data_iq = new ReceiverRawIQ(max_length);
   spectrum_internal =
@@ -48,8 +49,8 @@ void SpecData::calc_dft() {
   data_iq->mutex_lock.lock();
   // TEST: Look into better conversion methods
   for (unsigned int i = 0; i < max_length; i++) {
-    sample_buffer[i][0] = data_iq->samples.at(i).real();
-    sample_buffer[i][1] = data_iq->samples.at(i).imag();
+    sample_buffer[i][0] = data_iq->samples[i].real();
+    sample_buffer[i][1] = data_iq->samples[i].imag();
   }
   data_iq->mutex_lock.unlock();
   // Execute FFTW plan

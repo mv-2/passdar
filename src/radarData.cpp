@@ -15,6 +15,9 @@ const double PHASE_VELOCITY = 3e8;
 
 RadarData::RadarData(Config cfg, SpecData *_stream_a_data,
                      SpecData *_stream_b_data) {
+  // FIXME: Underlying maths for a lot of these parameters is not implemented
+  // properly right now. Will double check from first principles
+
   // assign data stream pointers
   stream_a_data = _stream_a_data;
   stream_b_data = _stream_b_data;
@@ -32,7 +35,7 @@ RadarData::RadarData(Config cfg, SpecData *_stream_a_data,
   // speed case in centre
   n_speed = 2 * static_cast<int>(cfg.process_cfg.max_speed / speed_step) + 1;
 
-  // range points ignores 0 range case
+  // range points
   n_range = static_cast<int>(cfg.process_cfg.max_range / range_step) + 1;
 
   // preallocate ambiguity
@@ -47,7 +50,7 @@ void RadarData::ambiguity_thread_calc(int first_col, int last_col) {
   // Temp value to accumulate integral
   std::complex<double> int_temp;
 
-  // FFTshift vel and invert range
+  // FFTshift vel
   int v_id_swap;
 
   // Ambiguity calculation perform FFTshift at same time
@@ -55,25 +58,37 @@ void RadarData::ambiguity_thread_calc(int first_col, int last_col) {
     v_id_swap = (v_id + n_speed / 2) % n_speed;
     for (int r_id = 0; r_id < n_range; r_id++) {
       int_temp = 0.0;
-      for (unsigned int i = 0; i < (data_a_copy.size() - n_range); i++) {
-        int_temp += data_a_copy[i + r_id] * std::conj(data_a_copy[i]) *
-                    std::polar(1.0, static_cast<double>(-2 * (int)i * v_id) *
-                                        M_PI / static_cast<double>(n_speed));
+      // TEST: See if FFTW3 can be used to speed up this process
+      for (unsigned int j = 0; j < (data_a_copy.size() - n_range); j++) {
+        int_temp += data_a_copy[j + r_id] * std::conj(data_b_copy[j]) *
+                    std::polar(1.0, static_cast<double>(-2 * j * v_id) * M_PI /
+                                        static_cast<double>(n_speed));
       }
       // NOTE: This is technically incorrect because absolute value of int_temp
       // should be divided by the pulse length but as only relative ambiguity
-      // matters the offset can be applied as a linear subtraction to the db
-      // value later
+      // matters the offset of -20*log10(data_a_copy.size()) can be applied
+      // later
       ambiguity[(n_range - r_id - 1) * n_speed + v_id_swap] =
-          20 * log10(std::abs(int_temp));
+          20.0 * log10(std::abs(int_temp));
     }
   }
+  return;
 }
 
 void RadarData::process_ambiguity(std::atomic<bool> *exit_flag) {
   // Initialise processing threads
-  std::thread amb_threads[NUM_THREADS];
-  int first_col, last_col;
+  std::deque<std::thread> amb_threads;
+  std::vector<int> first_cols(NUM_THREADS), last_cols(NUM_THREADS);
+  int col_step = n_speed % NUM_THREADS == 0 ? n_speed / NUM_THREADS
+                                            : n_speed / NUM_THREADS + 1;
+
+  // Set column limits for threads
+  first_cols[0] = 0;
+  for (int i = 0; i < NUM_THREADS - 1; i++) {
+    last_cols[i] = first_cols[i] + col_step;
+    first_cols[i + 1] = last_cols[i];
+  }
+  last_cols[NUM_THREADS - 1] = n_speed + 1;
 
   while (!exit_flag->load()) {
     // await next sample block
@@ -92,16 +107,13 @@ void RadarData::process_ambiguity(std::atomic<bool> *exit_flag) {
     // Calculate ambiguity
     ambiguity_mutex.lock();
     for (int i = 0; i < NUM_THREADS; i++) {
-      // ternary used here is ugly but effective
-      first_col = i * (n_speed / NUM_THREADS);
-      last_col = (i == (NUM_THREADS - 1)) ? n_speed + 1
-                                          : (i + 1) * n_speed / NUM_THREADS;
-      amb_threads[i] =
-          std::thread([&] { ambiguity_thread_calc(first_col, last_col); });
+      amb_threads.emplace_back(&RadarData::ambiguity_thread_calc, this,
+                               first_cols[i], last_cols[i]);
     }
     // Join threads to close
     for (int i = 0; i < NUM_THREADS; i++) {
-      amb_threads[i].join();
+      amb_threads.front().join();
+      amb_threads.pop_front();
     }
     ambiguity_mutex.unlock();
   }
