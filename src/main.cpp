@@ -1,11 +1,4 @@
 #include <iostream>
-#include <jsoncpp/json/json.h>
-#include <sdrplay_api.h>
-#include <sdrplay_api_tuner.h>
-#include <sys/ioctl.h>
-#include <sys/select.h>
-#include <termios.h>
-#include <unistd.h>
 
 #include "cfgInterface.h"
 #include "radarApp.h"
