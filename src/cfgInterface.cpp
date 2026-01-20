@@ -1,7 +1,6 @@
 #include <fstream>
 #include <iostream>
-#include <jsoncpp/json/reader.h>
-#include <jsoncpp/json/value.h>
+#include <nlohmann/json.hpp>
 #include <sdrplay_api_tuner.h>
 #include <unordered_map>
 
@@ -47,40 +46,29 @@ const std::unordered_map<std::string, sdrplay_api_LoModeT>
 const std::unordered_map<sdrplay_api_LoModeT, std::string>
     cfgInterface::loStr_map = reverse_map(cfgInterface::loType_map);
 
-Json::Value cfgInterface::load_config(std::string cfg_path) {
-  Json::Value root;
+nlohmann::json cfgInterface::load_config(std::string cfg_path) {
   std::ifstream cfg_file(cfg_path);
-  Json::CharReaderBuilder builder;
-  std::string errs;
-
-  // check if file Opened
   if (!cfg_file.is_open()) {
-    std::cerr << "Config File Not Opened" << std::endl;
+    std::cerr << "Failed to open config file" << std::endl;
     exit(1);
   }
-  // Parse and handle error
-  if (!Json::parseFromStream(builder, cfg_file, &root, &errs)) {
-    std::cerr << "Error Parsing Config File" << std::endl;
-    cfg_file.close();
-    exit(1);
-  }
-  return root;
+  return nlohmann::json::parse(cfg_file);
 }
 
-ReceiverConfig::ReceiverConfig(Json::Value json_rcv) {
-  fc = json_rcv["fc"].asUInt();
-  fs = json_rcv["fs"].asUInt();
-  agc_bandwidth_nr = json_rcv["agc_bandwidth_nr"].asInt();
-  agc_set_point_nr = json_rcv["agc_set_point_nr"].asInt();
-  gRdB_A = json_rcv["gRdB_A"].asInt();
-  gRdB_B = json_rcv["gRdB_B"].asInt();
-  lna_state = json_rcv["lna_state"].asInt();
-  dec_factor = json_rcv["dec_factor"].asInt();
-  ifType = cfgInterface::ifType_map.at(json_rcv["if_kHz"].asInt());
-  bwType = cfgInterface::bwType_map.at(json_rcv["bw_MHz"].asInt());
-  loType = cfgInterface::loType_map.at(json_rcv["lo_MHz"].asString());
-  rf_notch_enable = json_rcv["rf_notch_enable"].asBool();
-  dab_notch_enable = json_rcv["dab_notch_enable"].asBool();
+ReceiverConfig::ReceiverConfig(nlohmann::json json_rcv) {
+  fc = json_rcv["fc"];
+  fs = json_rcv["fs"];
+  agc_bandwidth_nr = json_rcv["agc_bandwidth_nr"];
+  agc_set_point_nr = json_rcv["agc_set_point_nr"];
+  gRdB_A = json_rcv["gRdB_A"];
+  gRdB_B = json_rcv["gRdB_B"];
+  lna_state = json_rcv["lna_state"];
+  dec_factor = json_rcv["dec_factor"];
+  ifType = cfgInterface::ifType_map.at(json_rcv["if_kHz"]);
+  bwType = cfgInterface::bwType_map.at(json_rcv["bw_MHz"]);
+  loType = cfgInterface::loType_map.at(json_rcv["lo_MHz"]);
+  rf_notch_enable = json_rcv["rf_notch_enable"];
+  dab_notch_enable = json_rcv["dab_notch_enable"];
 }
 
 ReceiverConfig::ReceiverConfig() {
@@ -99,11 +87,11 @@ ReceiverConfig::ReceiverConfig() {
   dab_notch_enable = 0;
 }
 
-ProcessConfig::ProcessConfig(Json::Value json_prcs) {
-  buffer_size = json_prcs["buffer_size"].asUInt();
-  speed_step = json_prcs["speed_step"].asDouble();
-  max_range = json_prcs["max_range"].asDouble();
-  max_speed = json_prcs["max_speed"].asDouble();
+ProcessConfig::ProcessConfig(nlohmann::json json_prcs) {
+  buffer_size = json_prcs["buffer_size"];
+  speed_step = json_prcs["speed_step"];
+  max_range = json_prcs["max_range"];
+  max_speed = json_prcs["max_speed"];
 }
 
 ProcessConfig::ProcessConfig() {
@@ -114,7 +102,7 @@ ProcessConfig::ProcessConfig() {
 }
 
 Config::Config(std::string cfg_path) : receiver_cfg(), process_cfg() {
-  Json::Value json_cfg = cfgInterface::load_config(cfg_path);
+  nlohmann::json json_cfg = cfgInterface::load_config(cfg_path);
   receiver_cfg = ReceiverConfig(json_cfg["receiver"]);
   process_cfg = ProcessConfig(json_cfg["processing"]);
 }

@@ -2,7 +2,6 @@
 #define SDRCAPTURE_H
 
 #include <cstdint>
-#include <jsoncpp/json/json.h>
 #include <sdrplay_api.h>
 #include <sdrplay_api_callback.h>
 #include <sdrplay_api_tuner.h>

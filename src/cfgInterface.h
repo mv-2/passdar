@@ -2,9 +2,10 @@
 #define CFGINTERFACE_H
 
 #include <cstdint>
-#include <jsoncpp/json/json.h>
-#include <jsoncpp/json/value.h>
-#include <sdrplay_api.h>
+// #include <json/json.h>
+// #include <json/value.h>
+// #include <sdrplay_api.h>
+#include <nlohmann/json.hpp>
 #include <sdrplay_api_tuner.h>
 #include <sys/types.h>
 #include <unordered_map>
@@ -47,7 +48,7 @@ public:
   /*
    * Static method to read config to Json::Value
    */
-  static Json::Value load_config(std::string cfg_path);
+  static nlohmann::json load_config(std::string cfg_path);
 
   /*
    * Static method to read config to Json::Value
@@ -72,7 +73,7 @@ struct ReceiverConfig {
   bool rf_notch_enable;
   bool dab_notch_enable;
 
-  ReceiverConfig(Json::Value json_rcv);
+  ReceiverConfig(nlohmann::json json_rcv);
   ReceiverConfig();
 };
 
@@ -85,7 +86,7 @@ struct ProcessConfig {
   double max_range;
   double max_speed;
 
-  ProcessConfig(Json::Value json_prcs);
+  ProcessConfig(nlohmann::json json_prcs);
   ProcessConfig();
 };
 

@@ -18,9 +18,8 @@ set(SOURCES
 )
 add_executable(passdar ${SOURCES})
 
-# JsonCpp
-find_package(jsoncpp REQUIRED)
-target_link_libraries(passdar PUBLIC JsonCpp::JsonCpp)
+# nlohmann_json
+target_link_libraries(passdar PRIVATE nlohmann_json)
 
 # FFTW
 set(FFTW_ROOT "/usr/local/x86_64-linux-gnu")

@@ -2,7 +2,6 @@
 #define RADARAPP_H
 
 #include <GLFW/glfw3.h>
-#include <jsoncpp/json/json.h>
 #include <sdrplay_api.h>
 #include <sdrplay_api_tuner.h>
 #include <sys/select.h>

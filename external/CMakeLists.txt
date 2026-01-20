@@ -1,10 +1,14 @@
 cmake_minimum_required(VERSION 3.14)
 
+# nlohmann_json
+set(JSON_BuildTests OFF CACHE INTERNAL "")
+add_subdirectory(nlohmann_json)
+
 # IMGUI
 add_library(imgui_core
   STATIC
     imgui/imgui.cpp
-    imgui/imgui_demo.cpp
+    # imgui/imgui_demo.cpp
     imgui/imgui_draw.cpp
     imgui/imgui_widgets.cpp
     imgui/imgui_tables.cpp
@@ -31,7 +35,7 @@ add_library(implot
     implot/implot.cpp
     implot/implot_internal.h
     implot/implot_items.cpp
-    implot/implot_demo.cpp
+    # implot/implot_demo.cpp
 )
 target_include_directories(implot
   PUBLIC

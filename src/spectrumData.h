@@ -2,7 +2,6 @@
 #define SPECTRUMDATA_H
 
 #include <fftw3.h>
-#include <jsoncpp/json/json.h>
 #include <mutex>
 #include <unordered_map>
 #include <vector>
