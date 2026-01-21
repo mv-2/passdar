@@ -1,5 +1,6 @@
 #include <GL/gl.h>
 #include <GLFW/glfw3.h>
+#include <chrono>
 #include <complex.h>
 #include <thread>
 #include <vector>
@@ -92,7 +93,7 @@ void RadarData::process_ambiguity(std::atomic<bool> *exit_flag) {
 
   while (!exit_flag->load()) {
     // await next sample block
-    sleep(1);
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     // lock iqdata and copy samples
     stream_a_data->data_iq->mutex_lock.lock();
