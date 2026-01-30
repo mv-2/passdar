@@ -2,7 +2,6 @@
 #include <GLFW/glfw3.h>
 #include <chrono>
 #include <complex.h>
-#include <iostream>
 #include <thread>
 #include <vector>
 
