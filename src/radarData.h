@@ -25,11 +25,14 @@ public:
   // Range step in m
   double range_step;
 
-  // Speed step in m
-  double speed_step;
-
   // Number of speed points
   int n_speed;
+
+  // maximum measurable speed
+  double max_speed;
+
+  // Speed step in m/s
+  double speed_step;
 
   // Number of range points
   int n_range;

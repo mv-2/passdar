@@ -3,7 +3,6 @@
 
 #include <fftw3.h>
 #include <mutex>
-#include <unordered_map>
 #include <vector>
 
 #include "cfgInterface.h"
@@ -23,11 +22,8 @@ public:
   // Spectrum vector
   std::vector<double> spectrum;
 
-  // Frequency vector
+  // Frequency vector [MHz]
   std::vector<double> frequency;
-
-  // Unordered map of numeric bandwidths
-  static const std::unordered_map<std::string, double> bwNumMap;
 
   /*
    * constructor

@@ -89,16 +89,13 @@ ReceiverConfig::ReceiverConfig() {
 
 ProcessConfig::ProcessConfig(nlohmann::json json_prcs) {
   buffer_size = json_prcs["buffer_size"];
-  speed_step = json_prcs["speed_step"];
   max_range = json_prcs["max_range"];
   max_speed = json_prcs["max_speed"];
 }
 
 ProcessConfig::ProcessConfig() {
   buffer_size = 0.0;
-  speed_step = 0.0;
   max_range = 0.0;
-  max_speed = 0.0;
 }
 
 Config::Config(std::string cfg_path) : receiver_cfg(), process_cfg() {

@@ -2,6 +2,7 @@
 #include <GLFW/glfw3.h>
 #include <chrono>
 #include <complex.h>
+#include <iostream>
 #include <thread>
 #include <vector>
 
@@ -9,16 +10,13 @@
 #include "radarData.h"
 
 // Number of available threads for ambiguity calculation
-const int NUM_THREADS = 12;
+const int NUM_AMBIGUITY_THREADS = 12;
 
-// Wave propagation velocity
+// Wave propagation velocity (I know we aren't in a vacuum)
 const double PHASE_VELOCITY = 3e8;
 
 RadarData::RadarData(Config cfg, SpecData *_stream_a_data,
                      SpecData *_stream_b_data) {
-  // FIXME: Underlying maths for a lot of these parameters is not implemented
-  // properly right now. Will double check from first principles
-
   // assign data stream pointers
   stream_a_data = _stream_a_data;
   stream_b_data = _stream_b_data;
@@ -29,12 +27,14 @@ RadarData::RadarData(Config cfg, SpecData *_stream_a_data,
   // Calculate range step
   range_step = PHASE_VELOCITY / sample_frequency;
 
-  // Calculate speed step
-  speed_step = cfg.process_cfg.speed_step;
-
-  // num speed points includes positive and negative values + 1 point for 0
-  // speed case in centre
-  n_speed = 2 * static_cast<int>(cfg.process_cfg.max_speed / speed_step) + 1;
+  // range points
+  double freq_step =
+      (stream_a_data->frequency[stream_a_data->max_length / 2 + 3] -
+       stream_a_data->frequency[stream_a_data->max_length / 2 + 2]) *
+      1e6;
+  speed_step = freq_step * PHASE_VELOCITY / (2 * cfg.receiver_cfg.fc);
+  max_speed = cfg.process_cfg.max_speed;
+  n_speed = 2 * max_speed / speed_step + 1;
 
   // range points
   n_range = static_cast<int>(cfg.process_cfg.max_range / range_step) + 1;
@@ -79,17 +79,19 @@ void RadarData::ambiguity_thread_calc(int first_col, int last_col) {
 void RadarData::process_ambiguity(std::atomic<bool> *exit_flag) {
   // Initialise processing threads
   std::deque<std::thread> amb_threads;
-  std::vector<int> first_cols(NUM_THREADS), last_cols(NUM_THREADS);
-  int col_step = n_speed % NUM_THREADS == 0 ? n_speed / NUM_THREADS
-                                            : n_speed / NUM_THREADS + 1;
+  std::vector<int> first_cols(NUM_AMBIGUITY_THREADS),
+      last_cols(NUM_AMBIGUITY_THREADS);
+  int col_step = n_speed % NUM_AMBIGUITY_THREADS == 0
+                     ? n_speed / NUM_AMBIGUITY_THREADS
+                     : n_speed / NUM_AMBIGUITY_THREADS + 1;
 
   // Set column limits for threads
   first_cols[0] = 0;
-  for (int i = 0; i < NUM_THREADS - 1; i++) {
+  for (int i = 0; i < NUM_AMBIGUITY_THREADS - 1; i++) {
     last_cols[i] = first_cols[i] + col_step;
     first_cols[i + 1] = last_cols[i];
   }
-  last_cols[NUM_THREADS - 1] = n_speed + 1;
+  last_cols[NUM_AMBIGUITY_THREADS - 1] = n_speed + 1;
 
   while (!exit_flag->load()) {
     // await next sample block
@@ -107,12 +109,12 @@ void RadarData::process_ambiguity(std::atomic<bool> *exit_flag) {
 
     // Calculate ambiguity
     ambiguity_mutex.lock();
-    for (int i = 0; i < NUM_THREADS; i++) {
+    for (int i = 0; i < NUM_AMBIGUITY_THREADS; i++) {
       amb_threads.emplace_back(&RadarData::ambiguity_thread_calc, this,
                                first_cols[i], last_cols[i]);
     }
     // Join threads to close
-    for (int i = 0; i < NUM_THREADS; i++) {
+    for (int i = 0; i < NUM_AMBIGUITY_THREADS; i++) {
       amb_threads.front().join();
       amb_threads.pop_front();
     }

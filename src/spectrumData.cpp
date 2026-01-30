@@ -1,15 +1,10 @@
 #include <atomic>
 #include <fftw3.h>
+#include <thread>
 #include <unistd.h>
 
 #include "cfgInterface.h"
 #include "spectrumData.h"
-
-const std::unordered_map<std::string, double> SpecData::bwNumMap = {
-    {"sdrplay_api_BW_0_200", 200.0},  {"sdrplay_api_BW_0_300", 300.0},
-    {"sdrplay_api_BW_0_600", 600.0},  {"sdrplay_api_BW_1_536", 1536.0},
-    {"sdrplay_api_BW_5_000", 5000.0}, {"sdrplay_api_BW_6_000", 6000.0},
-    {"sdrplay_api_BW_7_000", 7000.0}, {"sdrplay_api_BW_8_000", 8000.0}};
 
 SpecData::SpecData(Config cfg) {
   // TODO: CHECK MATHS
@@ -23,12 +18,14 @@ SpecData::SpecData(Config cfg) {
       (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * max_length);
   fft_plan = fftw_plan_dft_1d(max_length, sample_buffer, spectrum_internal,
                               FFTW_FORWARD, FFTW_ESTIMATE);
-  double bandwidth = cfg.receiver_cfg.bwType;
+  double sample_bandwidth = static_cast<double>(cfg.receiver_cfg.fs) /
+                            static_cast<double>(cfg.receiver_cfg.dec_factor);
   for (int i = -static_cast<int>(max_length) / 2;
        i < static_cast<int>(max_length) / 2; i++) {
-    frequency.push_back((static_cast<double>(i) * bandwidth +
+    frequency.push_back((static_cast<double>(i) * sample_bandwidth /
+                             static_cast<double>(max_length) +
                          static_cast<double>(cfg.receiver_cfg.fc)) /
-                        1000.0);
+                        1e6);
   }
 }
 
@@ -72,7 +69,7 @@ void SpecData::process_spectrum(std::atomic<bool> *exit_flag) {
                                                spectrum_internal[id_swap][1]));
     }
     mutex_lock.unlock();
-    sleep(1);
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
 
   // Free resources

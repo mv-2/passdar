@@ -82,7 +82,6 @@ struct ReceiverConfig {
  */
 struct ProcessConfig {
   uint32_t buffer_size;
-  double speed_step;
   double max_range;
   double max_speed;
 

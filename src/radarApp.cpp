@@ -94,9 +94,9 @@ void RadarApp::run() {
 
   // Heatmap parameters
   ImPlotHeatmapFlags hm_flags = 0;
-  ImVec2 hm_bound_min = ImVec2(-cfg.process_cfg.max_speed, 0);
+  ImVec2 hm_bound_min = ImVec2(-radar_data->max_speed, 0);
   ImVec2 hm_bound_max =
-      ImVec2(cfg.process_cfg.max_speed, cfg.process_cfg.max_range);
+      ImVec2(radar_data->max_speed, cfg.process_cfg.max_range);
 
   while (show_window && !glfwWindowShouldClose(window)) {
     update_window(window, &show_window, hm_bound_min, hm_bound_max, hm_flags);
@@ -145,7 +145,7 @@ void RadarApp::update_window(GLFWwindow *window, bool *show_window,
         ImPlot::PushStyleColor(ImPlotCol_Line, SPECTRUM_LINE_COLOUR);
         // Receiver A plot
         if (ImPlot::BeginPlot("Receiver A")) {
-          ImPlot::SetupAxes("Frequency [kHz]", "Amplitude [dB]");
+          ImPlot::SetupAxes("Frequency [MHz]", "Amplitude [dB]");
           stream_a_data->mutex_lock.lock();
           ImPlot::PlotLine("Receiver A", stream_a_data->frequency.data(),
                            stream_a_data->spectrum.data(),
@@ -155,7 +155,7 @@ void RadarApp::update_window(GLFWwindow *window, bool *show_window,
         }
         // Receiver B plot
         if (ImPlot::BeginPlot("Receiver B")) {
-          ImPlot::SetupAxes("Frequency [kHz]", "Amplitude [dB]");
+          ImPlot::SetupAxes("Frequency [MHz]", "Amplitude [dB]");
           stream_b_data->mutex_lock.lock();
           ImPlot::PlotLine("Receiver B", stream_b_data->frequency.data(),
                            stream_b_data->spectrum.data(),
@@ -319,26 +319,12 @@ void RadarApp::update_window(GLFWwindow *window, bool *show_window,
         ImGui::TableNextColumn();
         ImGui::Text("%d", cfg.process_cfg.buffer_size);
 
-        // Speed step size
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn();
-        ImGui::Text("Speed Step");
-        ImGui::TableNextColumn();
-        ImGui::Text("%lf", cfg.process_cfg.speed_step);
-
         // Max range
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
         ImGui::Text("Max Range");
         ImGui::TableNextColumn();
         ImGui::Text("%lf", cfg.process_cfg.max_range);
-
-        // Max Speed
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn();
-        ImGui::Text("Max Speed");
-        ImGui::TableNextColumn();
-        ImGui::Text("%lf", cfg.process_cfg.max_speed);
 
         ImGui::EndTable();
       }
