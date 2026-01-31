@@ -15,7 +15,7 @@
     "dab_notch_enable": false
   },
   "processing": {
-    "buffer_size": 65536,
+    "buffer_size": 262144,
     "max_range": 30000,
     "max_speed": 330
   }

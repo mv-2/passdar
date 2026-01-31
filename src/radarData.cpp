@@ -27,13 +27,11 @@ RadarData::RadarData(Config cfg, SpecData *_stream_a_data,
   range_step = PHASE_VELOCITY / sample_frequency;
 
   // range points
-  double freq_step =
-      (stream_a_data->frequency[stream_a_data->max_length / 2 + 3] -
-       stream_a_data->frequency[stream_a_data->max_length / 2 + 2]) *
-      1e6;
-  speed_step = freq_step * PHASE_VELOCITY / (2 * cfg.receiver_cfg.fc);
+  speed_step = (stream_a_data->frequency[1] - stream_a_data->frequency[0]) *
+               1e6 * PHASE_VELOCITY / (2 * cfg.receiver_cfg.fc);
   max_speed = cfg.process_cfg.max_speed;
   n_speed = 2 * max_speed / speed_step + 1;
+  max_speed = speed_step * (n_speed - 1) / 2;
 
   // range points
   n_range = static_cast<int>(cfg.process_cfg.max_range / range_step) + 1;
@@ -50,19 +48,24 @@ void RadarData::ambiguity_thread_calc(int first_col, int last_col) {
   // Temp value to accumulate integral
   std::complex<double> int_temp;
 
-  // FFTshift vel
+  // FFTshift vel id
   int v_id_swap;
 
   // Ambiguity calculation perform FFTshift at same time
   for (int v_id = first_col; v_id < last_col; v_id++) {
-    v_id_swap = (v_id + n_speed / 2) % n_speed;
+    v_id_swap = (v_id > static_cast<int>(stream_a_data->buffer_size / 2))
+                    ? (v_id + n_speed / 2) % stream_a_data->buffer_size
+                    : v_id + n_speed / 2;
+
     for (int r_id = 0; r_id < n_range; r_id++) {
       int_temp = 0.0;
       // TEST: See if FFTW3 can be used to speed up this process
       for (unsigned int j = 0; j < (data_a_copy.size() - n_range); j++) {
-        int_temp += data_a_copy[j + r_id] * std::conj(data_b_copy[j]) *
-                    std::polar(1.0, static_cast<double>(-2 * j * v_id) * M_PI /
-                                        static_cast<double>(n_speed));
+        int_temp +=
+            data_a_copy[j + r_id] * std::conj(data_b_copy[j]) *
+            std::polar(1.0,
+                       static_cast<double>(-2 * j * v_id) * M_PI /
+                           static_cast<double>(stream_a_data->buffer_size));
       }
       // NOTE: This is technically incorrect because absolute value of int_temp
       // should be divided by the pulse length but as only relative ambiguity
@@ -84,14 +87,24 @@ void RadarData::process_ambiguity(std::atomic<bool> *exit_flag) {
                      ? n_speed / NUM_AMBIGUITY_THREADS
                      : n_speed / NUM_AMBIGUITY_THREADS + 1;
 
-  // Set column limits for threads
+  // Fill positive frequency shift column limits
   first_cols[0] = 0;
-  for (int i = 0; i < NUM_AMBIGUITY_THREADS - 1; i++) {
+  for (int i = 0; i < NUM_AMBIGUITY_THREADS / 2; i++) {
     last_cols[i] = first_cols[i] + col_step;
     first_cols[i + 1] = last_cols[i];
   }
-  last_cols[NUM_AMBIGUITY_THREADS - 1] = n_speed + 1;
+  last_cols[NUM_AMBIGUITY_THREADS / 2 - 1] = n_speed / 2 + 1;
 
+  // Fill negative frequency shift column limits
+  first_cols[NUM_AMBIGUITY_THREADS / 2] =
+      stream_a_data->buffer_size - n_speed / 2;
+  for (int i = NUM_AMBIGUITY_THREADS / 2; i < NUM_AMBIGUITY_THREADS; i++) {
+    last_cols[i] = first_cols[i] + col_step;
+    first_cols[i + 1] = last_cols[i];
+  }
+  last_cols[NUM_AMBIGUITY_THREADS - 1] = stream_a_data->buffer_size;
+
+  // Loop ambiguity calculation
   while (!exit_flag->load()) {
     // await next sample block
     std::this_thread::sleep_for(std::chrono::milliseconds(100));

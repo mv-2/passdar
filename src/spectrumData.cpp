@@ -8,22 +8,22 @@
 
 SpecData::SpecData(Config cfg) {
   // TODO: CHECK MATHS
-  max_length = cfg.process_cfg.buffer_size;
-  data_iq = new ReceiverRawIQ(max_length);
+  buffer_size = cfg.process_cfg.buffer_size;
+  data_iq = new ReceiverRawIQ(buffer_size);
   spectrum_internal =
-      (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * max_length);
-  std::vector<double> spec(max_length);
-  spectrum.resize(max_length);
+      (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * buffer_size);
+  std::vector<double> spec(buffer_size);
+  spectrum.resize(buffer_size);
   sample_buffer =
-      (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * max_length);
-  fft_plan = fftw_plan_dft_1d(max_length, sample_buffer, spectrum_internal,
+      (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * buffer_size);
+  fft_plan = fftw_plan_dft_1d(buffer_size, sample_buffer, spectrum_internal,
                               FFTW_FORWARD, FFTW_ESTIMATE);
   double sample_bandwidth = static_cast<double>(cfg.receiver_cfg.fs) /
                             static_cast<double>(cfg.receiver_cfg.dec_factor);
-  for (int i = -static_cast<int>(max_length) / 2;
-       i < static_cast<int>(max_length) / 2; i++) {
+  for (int i = -static_cast<int>(buffer_size) / 2;
+       i < static_cast<int>(buffer_size) / 2; i++) {
     frequency.push_back((static_cast<double>(i) * sample_bandwidth /
-                             static_cast<double>(max_length) +
+                             static_cast<double>(buffer_size) +
                          static_cast<double>(cfg.receiver_cfg.fc)) /
                         1e6);
   }
@@ -45,7 +45,7 @@ void SpecData::calc_dft() {
   // Hold mutex to ensure no other threads read from buffer
   data_iq->mutex_lock.lock();
   // TEST: Look into better conversion methods
-  for (unsigned int i = 0; i < max_length; i++) {
+  for (unsigned int i = 0; i < buffer_size; i++) {
     sample_buffer[i][0] = data_iq->samples[i].real();
     sample_buffer[i][1] = data_iq->samples[i].imag();
   }
@@ -61,8 +61,8 @@ void SpecData::process_spectrum(std::atomic<bool> *exit_flag) {
     int id_swap;
     mutex_lock.lock();
     calc_dft();
-    for (unsigned int i = 0; i < max_length; i++) {
-      id_swap = (i + max_length / 2 - 1) % max_length;
+    for (unsigned int i = 0; i < buffer_size; i++) {
+      id_swap = (i + buffer_size / 2 - 1) % buffer_size;
       spectrum[i] = 20.0 * log10(std::sqrt(spectrum_internal[id_swap][0] *
                                                spectrum_internal[id_swap][0] +
                                            spectrum_internal[id_swap][1] *

@@ -16,14 +16,14 @@ struct ReceiverRawIQ {
   std::mutex mutex_lock;
 
   // maximum number of samples stored by object
-  unsigned int max_length;
+  unsigned int buffer_size;
 
   /*
    * ReceiverRawIQ constructor
    *
-   * @param max_length number of points stored at any time in buffers
+   * @param buffer_size number of points stored at any time in buffers
    */
-  ReceiverRawIQ(unsigned int max_length);
+  ReceiverRawIQ(unsigned int buffer_size);
 
   /*
    * Update data from USB data packet

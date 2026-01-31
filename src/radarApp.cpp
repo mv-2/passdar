@@ -324,7 +324,28 @@ void RadarApp::update_window(GLFWwindow *window, bool *show_window,
         ImGui::TableNextColumn();
         ImGui::Text("Max Range");
         ImGui::TableNextColumn();
-        ImGui::Text("%lf", cfg.process_cfg.max_range);
+        ImGui::Text("%.1lf m", cfg.process_cfg.max_range);
+
+        // Range step
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::Text("Range Step");
+        ImGui::TableNextColumn();
+        ImGui::Text("%.1lf m", radar_data->range_step);
+
+        // Max Speed
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::Text("Max Speed");
+        ImGui::TableNextColumn();
+        ImGui::Text("%.1lf m/s", cfg.process_cfg.max_speed);
+
+        // Speed step
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::Text("Speed Step");
+        ImGui::TableNextColumn();
+        ImGui::Text("%.1lf m/s", radar_data->speed_step);
 
         ImGui::EndTable();
       }

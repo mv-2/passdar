@@ -14,7 +14,7 @@
 class SpecData {
 public:
   // maximum number of samples stored by object
-  unsigned int max_length;
+  unsigned int buffer_size;
 
   // Raw IQ data object
   ReceiverRawIQ *data_iq;
