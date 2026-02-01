@@ -17,6 +17,7 @@
   "processing": {
     "buffer_size": 262144,
     "max_range": 30000,
-    "max_speed": 330
+    "max_speed": 330,
+    "dft_window": "Hanning"
   }
 }

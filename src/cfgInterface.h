@@ -2,13 +2,13 @@
 #define CFGINTERFACE_H
 
 #include <cstdint>
-// #include <json/json.h>
-// #include <json/value.h>
-// #include <sdrplay_api.h>
 #include <nlohmann/json.hpp>
 #include <sdrplay_api_tuner.h>
 #include <sys/types.h>
 #include <unordered_map>
+
+// DFT windowing enum
+enum class DftWindow { Rectangular, Hanning };
 
 /*
  * Class of static functions and variables for ease of config parsing
@@ -84,6 +84,8 @@ struct ProcessConfig {
   uint32_t buffer_size;
   double max_range;
   double max_speed;
+  DftWindow dft_window;
+  std::string _win_str;
 
   ProcessConfig(nlohmann::json json_prcs);
   ProcessConfig();

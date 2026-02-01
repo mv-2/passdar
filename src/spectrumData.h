@@ -68,5 +68,8 @@ private:
 
   // Spectrum buffer to store FFTW3 DFT results
   fftw_complex *spectrum_internal;
+
+  // Windowing vector
+  std::vector<double> dft_window;
 };
 #endif

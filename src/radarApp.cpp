@@ -319,6 +319,13 @@ void RadarApp::update_window(GLFWwindow *window, bool *show_window,
         ImGui::TableNextColumn();
         ImGui::Text("%d", cfg.process_cfg.buffer_size);
 
+        // Window
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::Text("Window");
+        ImGui::TableNextColumn();
+        ImGui::Text("%s", cfg.process_cfg._win_str.c_str());
+
         // Max range
         ImGui::TableNextRow();
         ImGui::TableNextColumn();

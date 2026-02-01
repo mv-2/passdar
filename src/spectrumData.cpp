@@ -1,5 +1,6 @@
 #include <atomic>
 #include <fftw3.h>
+#include <iostream>
 #include <thread>
 #include <unistd.h>
 
@@ -27,6 +28,23 @@ SpecData::SpecData(Config cfg) {
                          static_cast<double>(cfg.receiver_cfg.fc)) /
                         1e6);
   }
+
+  switch (cfg.process_cfg.dft_window) {
+  case DftWindow::Hanning: {
+    dft_window.reserve(buffer_size);
+    for (unsigned int i = 0; i < buffer_size; i++) {
+      dft_window[i] = 0.5 * (1.0 - cos(2 * M_PI * i / (buffer_size - 1)));
+    }
+    break;
+  }
+  case DftWindow::Rectangular: {
+    dft_window.resize(buffer_size, 1.0);
+    break;
+  }
+  default: {
+    std::cerr << "Error assigning window" << std::endl;
+  }
+  }
 }
 
 void SpecData::update_data(short *xi, short *xq, unsigned int numSamples) {
@@ -44,10 +62,10 @@ void SpecData::update_data(short *xi, short *xq, unsigned int numSamples) {
 void SpecData::calc_dft() {
   // Hold mutex to ensure no other threads read from buffer
   data_iq->mutex_lock.lock();
-  // TEST: Look into better conversion methods
+  // Copy data and apply window
   for (unsigned int i = 0; i < buffer_size; i++) {
-    sample_buffer[i][0] = data_iq->samples[i].real();
-    sample_buffer[i][1] = data_iq->samples[i].imag();
+    sample_buffer[i][0] = dft_window[i] * data_iq->samples[i].real();
+    sample_buffer[i][1] = dft_window[i] * data_iq->samples[i].imag();
   }
   data_iq->mutex_lock.unlock();
   // Execute FFTW plan

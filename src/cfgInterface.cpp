@@ -46,6 +46,9 @@ const std::unordered_map<std::string, sdrplay_api_LoModeT>
 const std::unordered_map<sdrplay_api_LoModeT, std::string>
     cfgInterface::loStr_map = reverse_map(cfgInterface::loType_map);
 
+const std::unordered_map<std::string, DftWindow> window_map = {
+    {"Rectangular", DftWindow::Rectangular}, {"Hanning", DftWindow::Hanning}};
+
 nlohmann::json cfgInterface::load_config(std::string cfg_path) {
   std::ifstream cfg_file(cfg_path);
   if (!cfg_file.is_open()) {
@@ -91,11 +94,16 @@ ProcessConfig::ProcessConfig(nlohmann::json json_prcs) {
   buffer_size = json_prcs["buffer_size"];
   max_range = json_prcs["max_range"];
   max_speed = json_prcs["max_speed"];
+  dft_window = window_map.at(json_prcs["dft_window"]);
+  _win_str = json_prcs["dft_window"];
 }
 
 ProcessConfig::ProcessConfig() {
   buffer_size = 0.0;
   max_range = 0.0;
+  max_speed = 0.0;
+  dft_window = DftWindow::Rectangular;
+  _win_str = "Rectangular";
 }
 
 Config::Config(std::string cfg_path) : receiver_cfg(), process_cfg() {
