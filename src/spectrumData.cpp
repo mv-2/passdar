@@ -8,17 +8,24 @@
 #include "spectrumData.h"
 
 SpecData::SpecData(Config cfg) {
-  // TODO: CHECK MATHS
   buffer_size = cfg.process_cfg.buffer_size;
+
+  // Pointer to raw data object
   data_iq = new ReceiverRawIQ(buffer_size);
+
+  // Assign all spectrum containers
   spectrum_internal =
       (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * buffer_size);
   std::vector<double> spec(buffer_size);
   spectrum.resize(buffer_size);
   sample_buffer =
       (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * buffer_size);
+
+  // Create FFTW plan
   fft_plan = fftw_plan_dft_1d(buffer_size, sample_buffer, spectrum_internal,
                               FFTW_FORWARD, FFTW_ESTIMATE);
+
+  // Set frequency vector values
   double sample_bandwidth = static_cast<double>(cfg.receiver_cfg.fs) /
                             static_cast<double>(cfg.receiver_cfg.dec_factor);
   for (int i = -static_cast<int>(buffer_size) / 2;
@@ -29,6 +36,7 @@ SpecData::SpecData(Config cfg) {
                         1e6);
   }
 
+  // Assign DFT window
   switch (cfg.process_cfg.dft_window) {
   case DftWindow::Hanning: {
     dft_window.reserve(buffer_size);
