@@ -1,15 +1,13 @@
 #include <GL/gl.h>
 #include <GLFW/glfw3.h>
 #include <chrono>
-#include <complex.h>
+#include <cmath>
+#include <fftw3.h>
 #include <thread>
 #include <vector>
 
 #include "cfgInterface.h"
 #include "radarData.h"
-
-// Number of available threads for ambiguity calculation
-const int NUM_AMBIGUITY_THREADS = 12;
 
 // Wave propagation velocity (I know we aren't in a vacuum)
 const double PHASE_VELOCITY = 3e8;
@@ -40,69 +38,66 @@ RadarData::RadarData(Config cfg, SpecData *_stream_a_data,
   ambiguity.resize(n_range * n_speed);
 
   // data copy preallocations
-  data_a_copy.resize(cfg.process_cfg.buffer_size);
-  data_b_copy.resize(cfg.process_cfg.buffer_size);
+  sample_buffer_size = cfg.process_cfg.buffer_size;
+  data_a_copy = fftw_alloc_complex(sample_buffer_size);
+  data_b_copy = fftw_alloc_complex(sample_buffer_size);
+  delay_lag_length = sample_buffer_size - n_range;
+
+  // Input and output vectors for fftw algorithm
+  delay_lag_product.resize(n_range);
+  fftw_amb_out.resize(n_range);
+  for (int i = 0; i < n_range; i++) {
+    delay_lag_product[i] = fftw_alloc_complex(sample_buffer_size);
+    fftw_amb_out[i] = fftw_alloc_complex(sample_buffer_size);
+  }
+
+  // Make FFTW3 plans
+  fftw_amb_plans.reserve(n_range);
+  for (int i = 0; i < n_range; i++) {
+    // TODO: Store wisdom for these
+    fftw_plan p =
+        fftw_plan_dft_1d(sample_buffer_size, delay_lag_product[i],
+                         fftw_amb_out[i], FFTW_FORWARD, FFTW_ESTIMATE);
+    fftw_amb_plans.push_back(p);
+  }
 }
 
-void RadarData::ambiguity_thread_calc(int first_col, int last_col) {
-  // Temp value to accumulate integral
-  std::complex<double> int_temp;
-
+void RadarData::ambiguity_thread_calc(int row) {
   // FFTshift vel id
   int v_id_swap;
 
-  // Ambiguity calculation perform FFTshift at same time
-  for (int v_id = first_col; v_id < last_col; v_id++) {
-    v_id_swap = (v_id > static_cast<int>(stream_a_data->buffer_size / 2))
-                    ? (v_id + n_speed / 2) % stream_a_data->buffer_size
-                    : v_id + n_speed / 2;
+  // execute the FFTW business
+  fftw_execute(fftw_amb_plans[row]);
 
-    for (int r_id = 0; r_id < n_range; r_id++) {
-      int_temp = 0.0;
-      // TEST: See if FFTW3 can be used to speed up this process
-      for (unsigned int j = 0; j < (data_a_copy.size() - n_range); j++) {
-        int_temp +=
-            data_a_copy[j + r_id] * std::conj(data_b_copy[j]) *
-            std::polar(1.0,
-                       static_cast<double>(-2 * j * v_id) * M_PI /
-                           static_cast<double>(stream_a_data->buffer_size));
-      }
-      // NOTE: This is technically incorrect because absolute value of int_temp
-      // should be divided by the pulse length but as only relative ambiguity
-      // matters the offset of -20*log10(data_a_copy.size()) can be applied
-      // later
-      ambiguity[(n_range - r_id - 1) * n_speed + v_id_swap] =
-          20.0 * log10(std::abs(int_temp));
-    }
+  // Positive frequencies
+  for (int v_id = 0; v_id < n_speed / 2 + 1; v_id++) {
+    v_id_swap = (v_id > static_cast<int>(sample_buffer_size / 2))
+                    ? (v_id + n_speed / 2) % sample_buffer_size
+                    : v_id + n_speed / 2;
+    ambiguity[row * n_speed + v_id_swap] =
+        20 * log10(std::sqrt(
+                 fftw_amb_out[row][v_id][0] * fftw_amb_out[row][v_id][0] +
+                 fftw_amb_out[row][v_id][1] * fftw_amb_out[row][v_id][1]));
   }
+
+  // Negative frequencies
+  for (int v_id = sample_buffer_size - n_speed / 2; v_id < sample_buffer_size;
+       v_id++) {
+    v_id_swap = (v_id > static_cast<int>(sample_buffer_size / 2))
+                    ? (v_id + n_speed / 2) % sample_buffer_size
+                    : v_id + n_speed / 2;
+    ambiguity[row * n_speed + v_id_swap] =
+        20 * log10(std::sqrt(
+                 fftw_amb_out[row][v_id][0] * fftw_amb_out[row][v_id][0] +
+                 fftw_amb_out[row][v_id][1] * fftw_amb_out[row][v_id][1]));
+  }
+
   return;
 }
 
 void RadarData::process_ambiguity(std::atomic<bool> *exit_flag) {
   // Initialise processing threads
   std::deque<std::thread> amb_threads;
-  std::vector<int> first_cols(NUM_AMBIGUITY_THREADS),
-      last_cols(NUM_AMBIGUITY_THREADS);
-  int col_step = n_speed % NUM_AMBIGUITY_THREADS == 0
-                     ? n_speed / NUM_AMBIGUITY_THREADS
-                     : n_speed / NUM_AMBIGUITY_THREADS + 1;
-
-  // Fill positive frequency shift column limits
-  first_cols[0] = 0;
-  for (int i = 0; i < NUM_AMBIGUITY_THREADS / 2; i++) {
-    last_cols[i] = first_cols[i] + col_step;
-    first_cols[i + 1] = last_cols[i];
-  }
-  last_cols[NUM_AMBIGUITY_THREADS / 2 - 1] = n_speed / 2 + 1;
-
-  // Fill negative frequency shift column limits
-  first_cols[NUM_AMBIGUITY_THREADS / 2] =
-      stream_a_data->buffer_size - n_speed / 2;
-  for (int i = NUM_AMBIGUITY_THREADS / 2; i < NUM_AMBIGUITY_THREADS; i++) {
-    last_cols[i] = first_cols[i] + col_step;
-    first_cols[i + 1] = last_cols[i];
-  }
-  last_cols[NUM_AMBIGUITY_THREADS - 1] = stream_a_data->buffer_size;
 
   // Loop ambiguity calculation
   while (!exit_flag->load()) {
@@ -112,24 +107,55 @@ void RadarData::process_ambiguity(std::atomic<bool> *exit_flag) {
     // lock iqdata and copy samples
     stream_a_data->data_iq->mutex_lock.lock();
     stream_b_data->data_iq->mutex_lock.lock();
-    for (unsigned int i = 0; i < data_a_copy.size(); i++) {
-      data_a_copy[i] = stream_a_data->data_iq->samples[i];
-      data_b_copy[i] = stream_b_data->data_iq->samples[i];
+    for (int i = 0; i < sample_buffer_size; i++) {
+      // buffer a
+      data_a_copy[i][0] = stream_a_data->data_iq->real_samples[i];
+      data_a_copy[i][1] = stream_a_data->data_iq->imag_samples[i];
+      // buffer b
+      data_b_copy[i][0] = stream_b_data->data_iq->real_samples[i];
+      data_b_copy[i][1] = stream_b_data->data_iq->imag_samples[i];
     }
     stream_a_data->data_iq->mutex_lock.unlock();
     stream_b_data->data_iq->mutex_lock.unlock();
 
+    // Pre calculate delay signal
+    for (int r_id = 0; r_id < n_range; r_id++) {
+      for (int j = 0; j < delay_lag_length; j++) {
+        // Complex conjugate multiplication for delay lag (a+bi)*(c-d*i) = (a*c
+        // + b*d) + (b*c - a*d)*i
+
+        // real
+        delay_lag_product[r_id][j][0] =
+            data_a_copy[j + r_id][0] * data_b_copy[j][0] +
+            data_a_copy[j + r_id][1] * data_b_copy[j][1];
+        // imag
+        delay_lag_product[r_id][j][1] =
+            data_a_copy[j + r_id][1] * data_b_copy[j][0] -
+            data_a_copy[j + r_id][0] * data_b_copy[j][1];
+      }
+    }
+
     // Calculate ambiguity
     ambiguity_mutex.lock();
-    for (int i = 0; i < NUM_AMBIGUITY_THREADS; i++) {
-      amb_threads.emplace_back(&RadarData::ambiguity_thread_calc, this,
-                               first_cols[i], last_cols[i]);
+    for (int i = 0; i < n_range; i++) {
+      amb_threads.emplace_back(&RadarData::ambiguity_thread_calc, this, i);
     }
     // Join threads to close
-    for (int i = 0; i < NUM_AMBIGUITY_THREADS; i++) {
+    for (int i = 0; i < n_range; i++) {
       amb_threads.front().join();
       amb_threads.pop_front();
     }
     ambiguity_mutex.unlock();
   }
+
+  // free FFTW arrays
+  for (int i = 0; i < n_range; i++) {
+    fftw_free(delay_lag_product[i]);
+    fftw_free(fftw_amb_out[i]);
+    fftw_destroy_plan(fftw_amb_plans[i]);
+  }
+  fftw_free(data_a_copy);
+  fftw_free(data_b_copy);
+
+  fftw_cleanup();
 }

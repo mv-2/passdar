@@ -2,6 +2,7 @@
 #define RADARDATA_H
 
 #include <atomic>
+#include <fftw3.h>
 #include <mutex>
 #include <unistd.h>
 
@@ -55,8 +56,11 @@ public:
 
 private:
   // Copied data samples
-  std::vector<std::complex<double>> data_a_copy;
-  std::vector<std::complex<double>> data_b_copy;
+  int sample_buffer_size;
+  fftw_complex *data_a_copy;
+  fftw_complex *data_b_copy;
+  std::vector<fftw_complex *> delay_lag_product;
+  int delay_lag_length;
 
   // sample frequency
   unsigned int sample_frequency;
@@ -64,6 +68,16 @@ private:
   /*
    * Calculates ambiguity surface over narrowed region.
    */
-  void ambiguity_thread_calc(int first_col, int last_col);
+  void ambiguity_thread_calc(int row);
+
+  /*
+   * FFTW3 plans for ambiguity calculation
+   */
+  std::vector<fftw_plan> fftw_amb_plans;
+
+  /*
+   * Result arrays for output of fftw3 ambiguity calculation
+   */
+  std::vector<fftw_complex *> fftw_amb_out;
 };
 #endif

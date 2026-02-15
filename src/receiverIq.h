@@ -1,16 +1,20 @@
 #ifndef RECEIVERIQ_H
 #define RECEIVERIQ_H
 
-#include <complex.h>
+// #include <complex.h>
 #include <deque>
+#include <fftw3.h>
 #include <mutex>
 
 /*
  * Store Raw IQ values output from RSPDuo device
  */
 struct ReceiverRawIQ {
-  // std::deque of std::complex<double> samples
-  std::deque<std::complex<double>> samples;
+  // std::deque of real samples
+  std::deque<double> real_samples;
+
+  // std::deque of imaginary samples
+  std::deque<double> imag_samples;
 
   // Mutex
   std::mutex mutex_lock;

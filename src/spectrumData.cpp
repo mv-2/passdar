@@ -14,12 +14,10 @@ SpecData::SpecData(Config cfg) {
   data_iq = new ReceiverRawIQ(buffer_size);
 
   // Assign all spectrum containers
-  spectrum_internal =
-      (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * buffer_size);
   std::vector<double> spec(buffer_size);
   spectrum.resize(buffer_size);
-  sample_buffer =
-      (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * buffer_size);
+  spectrum_internal = fftw_alloc_complex(buffer_size);
+  sample_buffer = fftw_alloc_complex(buffer_size);
 
   // Create FFTW plan
   fft_plan = fftw_plan_dft_1d(buffer_size, sample_buffer, spectrum_internal,
@@ -60,9 +58,10 @@ void SpecData::update_data(short *xi, short *xq, unsigned int numSamples) {
   data_iq->mutex_lock.lock();
   // Update and rotate buffer
   for (unsigned int i = 0; i < numSamples; i++) {
-    data_iq->samples.pop_front();
-    data_iq->samples.push_back(std::complex<double>(
-        static_cast<double>(xi[i]), static_cast<double>(xq[i])));
+    data_iq->real_samples.pop_front();
+    data_iq->imag_samples.pop_front();
+    data_iq->real_samples.emplace_back(static_cast<double>(xi[i]));
+    data_iq->imag_samples.emplace_back(static_cast<double>(xq[i]));
   }
   data_iq->mutex_lock.unlock();
 }
@@ -72,8 +71,10 @@ void SpecData::calc_dft() {
   data_iq->mutex_lock.lock();
   // Copy data and apply window
   for (unsigned int i = 0; i < buffer_size; i++) {
-    sample_buffer[i][0] = dft_window[i] * data_iq->samples[i].real();
-    sample_buffer[i][1] = dft_window[i] * data_iq->samples[i].imag();
+    // real
+    sample_buffer[i][0] = dft_window[i] * data_iq->real_samples[i];
+    // imag
+    sample_buffer[i][1] = dft_window[i] * data_iq->imag_samples[i];
   }
   data_iq->mutex_lock.unlock();
   // Execute FFTW plan

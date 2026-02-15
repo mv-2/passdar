@@ -1,5 +1,4 @@
 #include <atomic>
-#include <complex.h>
 #include <iostream>
 #include <sdrplay_api.h>
 #include <sdrplay_api_callback.h>
@@ -171,7 +170,7 @@ void Receiver::set_device_parameters() {
   // Get existing parameters
   if ((sdrErr =
            sdrplay_api_GetDeviceParams(chosenDevice->dev, &deviceParams))) {
-    std::cerr << "Get devioce params failed "
+    std::cerr << "Get device params failed "
               << sdrplay_api_GetErrorString(sdrErr) << std::endl;
     cleanup();
     exit(1);
