@@ -69,8 +69,6 @@ void Receiver::start_api() {
 
   // Set all parameters following validation
   set_device_parameters();
-
-  // TODO: PARAMETER VALIDATION
 }
 
 void Receiver::stop_api() {
@@ -138,11 +136,6 @@ void Receiver::get_device() {
   chosenDevice->tuner = sdrplay_api_Tuner_Both;
   chosenDevice->rspDuoMode = sdrplay_api_RspDuoMode_Dual_Tuner;
 
-  std::cout << "S/N:" << devs[0].SerNo << std::endl;
-  std::cout << "Hardware Version:" << devs[0].hwVer << std::endl;
-  std::cout << "Tuner:" << chosenDevice->tuner << std::endl;
-  std::cout << "RspDuoMode:" << chosenDevice->rspDuoMode << std::endl;
-
   // Select device
   if ((sdrErr = sdrplay_api_SelectDevice(chosenDevice)) !=
       sdrplay_api_Success) {
@@ -165,7 +158,6 @@ void Receiver::get_device() {
   return;
 }
 
-// TODO: Add additional parameters to this via config file
 void Receiver::set_device_parameters() {
   // Get existing parameters
   if ((sdrErr =
@@ -184,7 +176,6 @@ void Receiver::set_device_parameters() {
   }
 
   // set USB mode to bulk
-  // TODO: Check if this is sane
   deviceParams->devParams->mode = sdrplay_api_BULK;
 
   // Configure receiver settings for both channels (if parameters were

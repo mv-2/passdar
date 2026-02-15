@@ -3,3 +3,4 @@
 build/*
 *.ini
 .cache/*
+cfg/*.wisdom

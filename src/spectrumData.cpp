@@ -7,6 +7,8 @@
 #include "cfgInterface.h"
 #include "spectrumData.h"
 
+const std::string SPECTRUM_WISDOM_FILENAME = "cfg/spectrum.wisdom";
+
 SpecData::SpecData(Config cfg) {
   buffer_size = cfg.process_cfg.buffer_size;
 
@@ -19,9 +21,21 @@ SpecData::SpecData(Config cfg) {
   spectrum_internal = fftw_alloc_complex(buffer_size);
   sample_buffer = fftw_alloc_complex(buffer_size);
 
+  // Load wisdom file if available
+  if (fftw_import_wisdom_from_filename(SPECTRUM_WISDOM_FILENAME.c_str()) == 0) {
+    std::cout << "Failed to load " << SPECTRUM_WISDOM_FILENAME << " file"
+              << std::endl;
+  }
+
   // Create FFTW plan
   fft_plan = fftw_plan_dft_1d(buffer_size, sample_buffer, spectrum_internal,
-                              FFTW_FORWARD, FFTW_ESTIMATE);
+                              FFTW_FORWARD, FFTW_PATIENT);
+
+  // Export wisdom
+  if (fftw_export_wisdom_to_filename(SPECTRUM_WISDOM_FILENAME.c_str()) == 0) {
+    std::cout << "Failed to export " << SPECTRUM_WISDOM_FILENAME << " file"
+              << std::endl;
+  }
 
   // Set frequency vector values
   double sample_bandwidth = static_cast<double>(cfg.receiver_cfg.fs) /

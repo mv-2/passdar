@@ -3,6 +3,7 @@
 #include <chrono>
 #include <cmath>
 #include <fftw3.h>
+#include <iostream>
 #include <thread>
 #include <vector>
 
@@ -11,6 +12,8 @@
 
 // Wave propagation velocity (I know we aren't in a vacuum)
 const double PHASE_VELOCITY = 3e8;
+
+const std::string AMBIGUITY_WISDOM_FILE = "cfg/ambiguity.wisdom";
 
 RadarData::RadarData(Config cfg, SpecData *_stream_a_data,
                      SpecData *_stream_b_data) {
@@ -51,14 +54,24 @@ RadarData::RadarData(Config cfg, SpecData *_stream_a_data,
     fftw_amb_out[i] = fftw_alloc_complex(sample_buffer_size);
   }
 
+  // Load wisdom file if available
+  if (fftw_import_wisdom_from_filename(AMBIGUITY_WISDOM_FILE.c_str()) == 0) {
+    std::cout << "Failed to load " << AMBIGUITY_WISDOM_FILE << " file"
+              << std::endl;
+  }
+
   // Make FFTW3 plans
   fftw_amb_plans.reserve(n_range);
   for (int i = 0; i < n_range; i++) {
-    // TODO: Store wisdom for these
-    fftw_plan p =
-        fftw_plan_dft_1d(sample_buffer_size, delay_lag_product[i],
-                         fftw_amb_out[i], FFTW_FORWARD, FFTW_ESTIMATE);
+    fftw_plan p = fftw_plan_dft_1d(sample_buffer_size, delay_lag_product[i],
+                                   fftw_amb_out[i], FFTW_FORWARD, FFTW_PATIENT);
     fftw_amb_plans.push_back(p);
+  }
+
+  // Export wisdom
+  if (fftw_export_wisdom_to_filename(AMBIGUITY_WISDOM_FILE.c_str()) == 0) {
+    std::cout << "Failed to export " << AMBIGUITY_WISDOM_FILE << " file"
+              << std::endl;
   }
 }
 
