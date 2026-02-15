@@ -61,7 +61,7 @@ private:
 
   // Update window
   void update_window(GLFWwindow *window, bool *show_window, ImVec2 hm_bound_min,
-                     ImVec2 hm_bound_max, ImPlotHeatmapFlags hm_flags);
+                     ImVec2 hm_bound_max);
 
   // Config
   Config cfg;

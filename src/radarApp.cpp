@@ -93,13 +93,12 @@ void RadarApp::run() {
   bool show_window = true;
 
   // Heatmap parameters
-  ImPlotHeatmapFlags hm_flags = 0;
   ImVec2 hm_bound_min = ImVec2(-radar_data->max_speed, 0);
   ImVec2 hm_bound_max =
       ImVec2(radar_data->max_speed, cfg.process_cfg.max_range);
 
   while (show_window && !glfwWindowShouldClose(window)) {
-    update_window(window, &show_window, hm_bound_min, hm_bound_max, hm_flags);
+    update_window(window, &show_window, hm_bound_min, hm_bound_max);
   }
 
   // Cleanup
@@ -119,8 +118,7 @@ void RadarApp::run() {
 }
 
 void RadarApp::update_window(GLFWwindow *window, bool *show_window,
-                             ImVec2 hm_bound_min, ImVec2 hm_bound_max,
-                             ImPlotHeatmapFlags hm_flags) {
+                             ImVec2 hm_bound_min, ImVec2 hm_bound_max) {
   glfwPollEvents();
 
   // ImGui Frame
@@ -185,7 +183,7 @@ void RadarApp::update_window(GLFWwindow *window, bool *show_window,
         // Plot ambiguity copy
         ImPlot::PlotHeatmap("Range - Doppler", ambiguity_copy.data(),
                             radar_data->n_range, radar_data->n_speed, 0, 0,
-                            NULL, hm_bound_min, hm_bound_max, hm_flags);
+                            NULL, hm_bound_min, hm_bound_max);
         ImPlot::EndPlot();
       }
 
