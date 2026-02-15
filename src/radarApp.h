@@ -10,7 +10,6 @@
 
 #include "cfgInterface.h"
 #include "imgui.h"
-#include "implot.h"
 #include "radarData.h"
 #include "sdrCapture.h"
 

@@ -12,7 +12,7 @@
 #include "radarApp.h"
 #include "sdrCapture.h"
 
-const ImVec4 SPECTRUM_LINE_COLOUR = ImVec4(0.2f, 1.0f, 0.6f, 1.0f);
+const ImPlotColormap SPECTRUM_COLOUR_MAP = ImPlotColormap_Spectral;
 const ImPlotColormap AMBIGUITY_COLOUR_MAP = ImPlotColormap_Jet;
 const int COLOURBAR_WIDTH = 100;
 
@@ -139,9 +139,8 @@ void RadarApp::update_window(GLFWwindow *window, bool *show_window,
     if (ImGui::BeginTabItem("Receiver Spectra")) {
       // Receiver subplots
       if (ImPlot::BeginSubplots("Receiver Spectra", 2, 1, ImVec2(-1, -1))) {
-        // Set line colour separate to heatmap style
-        ImPlot::PushStyleColor(ImPlotCol_Line, SPECTRUM_LINE_COLOUR);
         // Receiver A plot
+        ImPlot::PushColormap(SPECTRUM_COLOUR_MAP);
         if (ImPlot::BeginPlot("Receiver A")) {
           ImPlot::SetupAxes("Frequency [MHz]", "Amplitude [dB]");
           stream_a_data->mutex_lock.lock();
@@ -161,7 +160,7 @@ void RadarApp::update_window(GLFWwindow *window, bool *show_window,
           stream_b_data->mutex_lock.unlock();
           ImPlot::EndPlot();
         }
-        ImPlot::PopStyleColor();
+        ImPlot::PopColormap();
         ImPlot::EndSubplots();
       }
       ImGui::EndTabItem();
