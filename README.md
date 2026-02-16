@@ -28,4 +28,4 @@ Run by pointing to config file.
 
 On first startup, expect that the window will take a while to show. `FFTW`
 is used to calculate the DFT and ambiguity which requires pre-computing
-multiple FFTW plans using the `FFTW_PATIENT` option.
+multiple `FFTW` plans using the `FFTW_PATIENT` option.
