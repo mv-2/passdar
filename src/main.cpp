@@ -1,7 +1,7 @@
 #include <iostream>
 
-#include "cfgInterface.h"
-#include "radarApp.h"
+#include "frontend/radarApp.h"
+#include "hardwareInterface/cfgInterface.h"
 
 int main(int argc, char *argv[]) {
   // Get config file location

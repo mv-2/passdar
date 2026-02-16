@@ -5,8 +5,8 @@
 #include <mutex>
 #include <vector>
 
-#include "cfgInterface.h"
-#include "receiverIq.h"
+#include "../hardwareInterface/cfgInterface.h"
+#include "../hardwareInterface/receiverIq.h"
 
 /*
  * Stores spectrum data

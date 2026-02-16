@@ -7,7 +7,7 @@
 #include <thread>
 #include <vector>
 
-#include "cfgInterface.h"
+#include "../hardwareInterface/cfgInterface.h"
 #include "radarData.h"
 
 // Wave propagation velocity (I know we aren't in a vacuum)

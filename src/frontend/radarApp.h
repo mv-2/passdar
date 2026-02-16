@@ -8,10 +8,10 @@
 #include <thread>
 #include <unistd.h>
 
-#include "cfgInterface.h"
+#include "../hardwareInterface/cfgInterface.h"
+#include "../hardwareInterface/sdrCapture.h"
+#include "../processing/radarData.h"
 #include "imgui.h"
-#include "radarData.h"
-#include "sdrCapture.h"
 
 class RadarApp {
 public:

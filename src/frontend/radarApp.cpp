@@ -4,13 +4,13 @@
 #include <iostream>
 #include <thread>
 
-#include "../external/imgui/backends/imgui_impl_glfw.h"
-#include "../external/imgui/backends/imgui_impl_opengl3.h"
-#include "cfgInterface.h"
+#include "../../external/imgui/backends/imgui_impl_glfw.h"
+#include "../../external/imgui/backends/imgui_impl_opengl3.h"
+#include "../hardwareInterface/cfgInterface.h"
+#include "../hardwareInterface/sdrCapture.h"
 #include "imgui.h"
 #include "implot.h"
 #include "radarApp.h"
-#include "sdrCapture.h"
 
 const ImPlotColormap SPECTRUM_COLOUR_MAP = ImPlotColormap_Spectral;
 const ImPlotColormap AMBIGUITY_COLOUR_MAP = ImPlotColormap_Jet;

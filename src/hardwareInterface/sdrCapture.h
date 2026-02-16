@@ -7,8 +7,8 @@
 #include <sdrplay_api_tuner.h>
 #include <stdint.h>
 
+#include "../processing/spectrumData.h"
 #include "cfgInterface.h"
-#include "spectrumData.h"
 
 class Receiver {
 public:

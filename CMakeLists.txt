@@ -7,14 +7,18 @@ add_compile_options(-O3 -Wall -Wextra -pedantic-errors -Werror)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "")
 
 # Project source files
+set(SOURCE_DIR src)
+set(HARDWARE_DIR hardwareInterface)
+set(FRONTEND_DIR frontend)
+set(PROCESSING_DIR processing)
 set(SOURCES
-  src/main.cpp
-  src/radarApp.cpp
-  src/cfgInterface.cpp
-  src/radarData.cpp
-  src/receiverIq.cpp
-  src/sdrCapture.cpp
-  src/spectrumData.cpp
+  ${SOURCE_DIR}/main.cpp
+  ${SOURCE_DIR}/${FRONTEND_DIR}/radarApp.cpp
+  ${SOURCE_DIR}/${HARDWARE_DIR}//cfgInterface.cpp
+  ${SOURCE_DIR}/${PROCESSING_DIR}/radarData.cpp
+  ${SOURCE_DIR}/${HARDWARE_DIR}/receiverIq.cpp
+  ${SOURCE_DIR}/${HARDWARE_DIR}/sdrCapture.cpp
+  ${SOURCE_DIR}/${PROCESSING_DIR}/spectrumData.cpp
 )
 add_executable(passdar ${SOURCES})
 

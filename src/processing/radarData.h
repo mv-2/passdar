@@ -6,7 +6,7 @@
 #include <mutex>
 #include <unistd.h>
 
-#include "cfgInterface.h"
+#include "../hardwareInterface/cfgInterface.h"
 #include "spectrumData.h"
 
 /*

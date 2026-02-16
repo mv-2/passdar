@@ -4,7 +4,7 @@
 #include <thread>
 #include <unistd.h>
 
-#include "cfgInterface.h"
+#include "../hardwareInterface/cfgInterface.h"
 #include "spectrumData.h"
 
 const std::string SPECTRUM_WISDOM_FILENAME = "cfg/spectrum.wisdom";
