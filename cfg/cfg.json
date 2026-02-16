@@ -15,7 +15,7 @@
     "dab_notch_enable": false
   },
   "processing": {
-    "buffer_size": 262144,
+    "buffer_size": 524288,
     "max_range": 60000,
     "max_speed": 350,
     "dft_window": "Hanning"

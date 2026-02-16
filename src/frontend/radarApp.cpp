@@ -188,7 +188,7 @@ void RadarApp::update_window(GLFWwindow *window, bool *show_window,
 
       // Display Colorbar
       ImGui::SameLine();
-      ImPlot::ColormapScale("Ambiguity [dB]", 0.0f, 70.0f, ImVec2(-1, -1));
+      ImPlot::ColormapScale("Ambiguity [dB]", 30.0f, 70.0f, ImVec2(-1, -1));
 
       // Pop style stack
       ImPlot::PopColormap();
