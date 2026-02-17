@@ -13,7 +13,8 @@ SpecData::SpecData(Config cfg) {
   buffer_size = cfg.process_cfg.buffer_size;
 
   // Pointer to raw data object
-  data_iq = new ReceiverRawIQ(buffer_size);
+  spectrum_iq = new ReceiverRawIQ(buffer_size);
+  ambiguity_iq = new ReceiverRawIQ(buffer_size);
 
   // Assign all spectrum containers
   std::vector<double> spec(buffer_size);
@@ -68,28 +69,37 @@ SpecData::SpecData(Config cfg) {
 }
 
 void SpecData::update_data(short *xi, short *xq, unsigned int numSamples) {
+  // cast vars
+  double xi_d, xq_d;
+
   // Hold mutex to ensure no other threads read from buffer
-  data_iq->mutex_lock.lock();
+  spectrum_iq->mutex_lock.lock();
+  ambiguity_iq->mutex_lock.lock();
   // Update and rotate buffer
   for (unsigned int i = 0; i < numSamples; i++) {
-    data_iq->samples.pop_front();
-    data_iq->samples.push_back(
-        {static_cast<double>(xi[i]), static_cast<double>(xq[i])});
+    xi_d = static_cast<double>(xi[i]);
+    xq_d = static_cast<double>(xq[i]);
+    spectrum_iq->samples.pop_front();
+    spectrum_iq->samples.push_back({xi_d, xq_d});
+
+    ambiguity_iq->samples.pop_front();
+    ambiguity_iq->samples.push_back({xi_d, xq_d});
   }
-  data_iq->mutex_lock.unlock();
+  spectrum_iq->mutex_lock.unlock();
+  ambiguity_iq->mutex_lock.unlock();
 }
 
 void SpecData::calc_dft() {
   // Hold mutex to ensure no other threads read from buffer
-  data_iq->mutex_lock.lock();
+  spectrum_iq->mutex_lock.lock();
   // Copy data and apply window
   for (unsigned int i = 0; i < buffer_size; i++) {
     // real
-    sample_buffer[i][0] = dft_window[i] * data_iq->samples[i][0];
+    sample_buffer[i][0] = dft_window[i] * spectrum_iq->samples[i][0];
     // imag
-    sample_buffer[i][1] = dft_window[i] * data_iq->samples[i][1];
+    sample_buffer[i][1] = dft_window[i] * spectrum_iq->samples[i][1];
   }
-  data_iq->mutex_lock.unlock();
+  spectrum_iq->mutex_lock.unlock();
   // Execute FFTW plan
   fftw_execute(fft_plan);
 }

@@ -117,19 +117,20 @@ void RadarData::process_ambiguity(std::atomic<bool> *exit_flag) {
     // await next sample block
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
+    std::cout << "AMB\n";
     // lock iqdata and copy samples
-    stream_a_data->data_iq->mutex_lock.lock();
-    stream_b_data->data_iq->mutex_lock.lock();
+    stream_a_data->ambiguity_iq->mutex_lock.lock();
+    stream_b_data->ambiguity_iq->mutex_lock.lock();
     for (int i = 0; i < sample_buffer_size; i++) {
       // buffer a
-      data_a_copy[i][0] = stream_a_data->data_iq->samples[i][0];
-      data_a_copy[i][1] = stream_a_data->data_iq->samples[i][1];
+      data_a_copy[i][0] = stream_a_data->ambiguity_iq->samples[i][0];
+      data_a_copy[i][1] = stream_a_data->ambiguity_iq->samples[i][1];
       // buffer b
-      data_b_copy[i][0] = stream_b_data->data_iq->samples[i][0];
-      data_b_copy[i][1] = stream_b_data->data_iq->samples[i][1];
+      data_b_copy[i][0] = stream_b_data->ambiguity_iq->samples[i][0];
+      data_b_copy[i][1] = stream_b_data->ambiguity_iq->samples[i][1];
     }
-    stream_a_data->data_iq->mutex_lock.unlock();
-    stream_b_data->data_iq->mutex_lock.unlock();
+    stream_a_data->ambiguity_iq->mutex_lock.unlock();
+    stream_b_data->ambiguity_iq->mutex_lock.unlock();
 
     // Pre calculate delay signal
     for (int r_id = 0; r_id < n_range; r_id++) {

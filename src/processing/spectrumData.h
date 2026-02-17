@@ -16,8 +16,9 @@ public:
   // maximum number of samples stored by object
   unsigned int buffer_size;
 
-  // Raw IQ data object
-  ReceiverRawIQ *data_iq;
+  // Raw IQ data
+  ReceiverRawIQ *spectrum_iq;
+  ReceiverRawIQ *ambiguity_iq;
 
   // Spectrum vector
   std::vector<double> spectrum;
