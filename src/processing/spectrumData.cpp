@@ -72,10 +72,9 @@ void SpecData::update_data(short *xi, short *xq, unsigned int numSamples) {
   data_iq->mutex_lock.lock();
   // Update and rotate buffer
   for (unsigned int i = 0; i < numSamples; i++) {
-    data_iq->real_samples.pop_front();
-    data_iq->imag_samples.pop_front();
-    data_iq->real_samples.emplace_back(static_cast<double>(xi[i]));
-    data_iq->imag_samples.emplace_back(static_cast<double>(xq[i]));
+    data_iq->samples.pop_front();
+    data_iq->samples.push_back(
+        {static_cast<double>(xi[i]), static_cast<double>(xq[i])});
   }
   data_iq->mutex_lock.unlock();
 }
@@ -86,9 +85,9 @@ void SpecData::calc_dft() {
   // Copy data and apply window
   for (unsigned int i = 0; i < buffer_size; i++) {
     // real
-    sample_buffer[i][0] = dft_window[i] * data_iq->real_samples[i];
+    sample_buffer[i][0] = dft_window[i] * data_iq->samples[i][0];
     // imag
-    sample_buffer[i][1] = dft_window[i] * data_iq->imag_samples[i];
+    sample_buffer[i][1] = dft_window[i] * data_iq->samples[i][1];
   }
   data_iq->mutex_lock.unlock();
   // Execute FFTW plan

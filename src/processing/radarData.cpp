@@ -122,11 +122,11 @@ void RadarData::process_ambiguity(std::atomic<bool> *exit_flag) {
     stream_b_data->data_iq->mutex_lock.lock();
     for (int i = 0; i < sample_buffer_size; i++) {
       // buffer a
-      data_a_copy[i][0] = stream_a_data->data_iq->real_samples[i];
-      data_a_copy[i][1] = stream_a_data->data_iq->imag_samples[i];
+      data_a_copy[i][0] = stream_a_data->data_iq->samples[i][0];
+      data_a_copy[i][1] = stream_a_data->data_iq->samples[i][1];
       // buffer b
-      data_b_copy[i][0] = stream_b_data->data_iq->real_samples[i];
-      data_b_copy[i][1] = stream_b_data->data_iq->imag_samples[i];
+      data_b_copy[i][0] = stream_b_data->data_iq->samples[i][0];
+      data_b_copy[i][1] = stream_b_data->data_iq->samples[i][1];
     }
     stream_a_data->data_iq->mutex_lock.unlock();
     stream_b_data->data_iq->mutex_lock.unlock();
