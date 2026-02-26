@@ -31,14 +31,17 @@ RadarData::RadarData(Config cfg, SpecData *_stream_a_data,
   speed_step = (stream_a_data->frequency[1] - stream_a_data->frequency[0]) *
                1e6 * PHASE_VELOCITY / (2 * cfg.receiver_cfg.fc);
   max_speed = cfg.process_cfg.max_speed;
-  n_speed = 2 * max_speed / speed_step + 1;
-  max_speed = speed_step * (n_speed - 1) / 2;
+  n_speed = max_speed / speed_step;
+  ambiguity_columns = 2 * n_speed - 1;
+  // n_speed = max_speed / speed_step;
+  // recalculate max_speed in line with possible speed steps
+  max_speed = speed_step * n_speed;
 
   // range points
   n_range = static_cast<int>(cfg.process_cfg.max_range / range_step) + 1;
 
   // preallocate ambiguity
-  ambiguity.resize(n_range * n_speed);
+  ambiguity.resize(n_range * ambiguity_columns);
 
   // data copy preallocations
   sample_buffer_size = cfg.process_cfg.buffer_size;
@@ -63,8 +66,13 @@ RadarData::RadarData(Config cfg, SpecData *_stream_a_data,
   // Make FFTW3 plans
   fftw_amb_plans.reserve(n_range);
   for (int i = 0; i < n_range; i++) {
-    fftw_plan p = fftw_plan_dft_1d(sample_buffer_size, delay_lag_product[i],
-                                   fftw_amb_out[i], FFTW_FORWARD, FFTW_PATIENT);
+    // fftw_plan p = fftw_plan_dft_1d(sample_buffer_size, delay_lag_product[i],
+    //                                fftw_amb_out[i], FFTW_FORWARD,
+    //                                FFTW_PATIENT);
+    fftw_plan p = fftw_plan_many_dft(
+        1, &n_speed, sample_buffer_size / n_speed, delay_lag_product[i], NULL,
+        sample_buffer_size / n_speed, 1, fftw_amb_out[i], NULL, 1, n_speed,
+        FFTW_FORWARD, FFTW_PATIENT);
     fftw_amb_plans.push_back(p);
   }
 
@@ -73,37 +81,114 @@ RadarData::RadarData(Config cfg, SpecData *_stream_a_data,
     std::cout << "Failed to export " << AMBIGUITY_WISDOM_FILE << " file"
               << std::endl;
   }
+
+  // Compute twiddles
+  twiddle_factors =
+      fftw_alloc_complex((n_speed - 1) * (sample_buffer_size / n_speed - 1));
+  for (int j = 1; j < sample_buffer_size / n_speed; j++) {
+    for (int i = 1; i < n_speed; i++) {
+      twiddle_factors[(j - 1) * (n_speed - 1) + (i - 1)][0] =
+          cos(static_cast<double>(i * j) * FFTW_FORWARD * 2 * M_PI /
+              static_cast<double>(sample_buffer_size));
+      twiddle_factors[(j - 1) * (n_speed - 1) + (i - 1)][1] =
+          sin(static_cast<double>(i * j) * FFTW_FORWARD * 2 * M_PI /
+              static_cast<double>(sample_buffer_size));
+    }
+  }
 }
 
 void RadarData::ambiguity_thread_calc(int row) {
   // FFTshift vel id
-  int v_id_swap;
+  // int v_id_swap;
 
   // execute the FFTW business
   fftw_execute(fftw_amb_plans[row]);
 
-  // Positive frequencies
-  for (int v_id = 0; v_id < n_speed / 2 + 1; v_id++) {
-    v_id_swap = (v_id > static_cast<int>(sample_buffer_size / 2))
-                    ? (v_id + n_speed / 2) % sample_buffer_size
-                    : v_id + n_speed / 2;
-    ambiguity[row * n_speed + v_id_swap] =
+  // Apply twiddles and adjustments
+  fftw_complex amb_adj0, amb_adjN;
+
+  // TODO: Use actual complex operations where possible
+
+  // For FFT mapping N = sample_buffer_size, K = n_speed
+  fftw_amb_out[row][0][0] += fftw_amb_out[row][sample_buffer_size - n_speed][0];
+  fftw_amb_out[row][0][1] += fftw_amb_out[row][sample_buffer_size - n_speed][1];
+
+  // TODO: try cascade summation to fix accuracy issues
+  for (int i = 1; i < n_speed; i++) {
+    // Adjustment values
+    amb_adj0[0] = fftw_amb_out[row][i][0];
+    amb_adj0[1] = fftw_amb_out[row][i][1];
+    amb_adjN[0] = fftw_amb_out[row][(sample_buffer_size - n_speed) + i][0];
+    amb_adjN[1] = fftw_amb_out[row][(sample_buffer_size - n_speed) + i][1];
+
+    fftw_amb_out[row][i][0] =
+        amb_adj0[0] +
+        amb_adjN[0] *
+            twiddle_factors[(sample_buffer_size / n_speed - 2) * (n_speed - 1) +
+                            (i - 1)][0];
+    fftw_amb_out[row][i][1] =
+        amb_adj0[1] +
+        amb_adjN[1] *
+            twiddle_factors[(sample_buffer_size / n_speed - 2) * (n_speed - 1) +
+                            (i - 1)][1];
+
+    // NOTE: change of sign for amb_adjN term is intentional for complex
+    // conjugate multiplication
+    fftw_amb_out[row][sample_buffer_size - n_speed + i][0] =
+        amb_adj0[0] +
+        amb_adjN[0] *
+            twiddle_factors[(sample_buffer_size / n_speed - 2) * (n_speed - 1) +
+                            (n_speed - i - 1)][0];
+    fftw_amb_out[row][sample_buffer_size - n_speed + i][1] =
+        amb_adj0[1] -
+        amb_adjN[1] *
+            twiddle_factors[(sample_buffer_size / n_speed - 2) * (n_speed - 1) +
+                            (n_speed - i - 1)][1];
+  }
+  for (int j = 1; j < (sample_buffer_size / n_speed - 1); j++) {
+    fftw_amb_out[row][0][0] += fftw_amb_out[row][j * n_speed][0];
+    fftw_amb_out[row][0][1] += fftw_amb_out[row][j * n_speed][1];
+
+    for (int i = 1; i < n_speed; i++) {
+      fftw_amb_out[row][i][0] +=
+          fftw_amb_out[row][i + j * n_speed][0] *
+          twiddle_factors[(j - 1) * (n_speed - 1) + (i - 1)][0];
+      fftw_amb_out[row][i][1] +=
+          fftw_amb_out[row][i + j * n_speed][1] *
+          twiddle_factors[(j - 1) * (n_speed - 1) + (i - 1)][1];
+    }
+    for (int i = 1; i < n_speed; i++) {
+      // NOTE: change of sign is intentional for complex conjugate
+      // multiplication
+      fftw_amb_out[row][(sample_buffer_size - n_speed) + i][0] +=
+          fftw_amb_out[row][i + j * n_speed][0] *
+          twiddle_factors[(j - 1) * (n_speed - 1) + (n_speed + i - 1)][0];
+      fftw_amb_out[row][(sample_buffer_size - n_speed) + i][1] -=
+          fftw_amb_out[row][i + j * n_speed][1] *
+          twiddle_factors[(j - 1) * (n_speed - 1) + (n_speed + i - 1)][1];
+    }
+  }
+
+  // Positive frequency assignment
+  int v_id_swap;
+  for (int v_id = 0; v_id < n_speed; v_id++) {
+    v_id_swap = ambiguity_columns - v_id - 1;
+    ambiguity[row * ambiguity_columns + v_id_swap] =
         20 * log10(std::sqrt(
                  fftw_amb_out[row][v_id][0] * fftw_amb_out[row][v_id][0] +
                  fftw_amb_out[row][v_id][1] * fftw_amb_out[row][v_id][1]));
   }
 
-  // Negative frequencies
-  for (int v_id = sample_buffer_size - n_speed / 2; v_id < sample_buffer_size;
-       v_id++) {
-    v_id_swap = (v_id > static_cast<int>(sample_buffer_size / 2))
-                    ? (v_id + n_speed / 2) % sample_buffer_size
-                    : v_id + n_speed / 2;
-    ambiguity[row * n_speed + v_id_swap] =
-        20 * log10(std::sqrt(
-                 fftw_amb_out[row][v_id][0] * fftw_amb_out[row][v_id][0] +
-                 fftw_amb_out[row][v_id][1] * fftw_amb_out[row][v_id][1]));
-  }
+  // Negative frequency assignment
+  // v_id_swap = 0;
+  // for (int v_id = sample_buffer_size - n_speed; v_id < sample_buffer_size;
+  //      v_id++) {
+  //   ambiguity[row * ambiguity_columns + v_id_swap] =
+  //       20 * log10(std::sqrt(
+  //                fftw_amb_out[row][v_id][0] * fftw_amb_out[row][v_id][0] +
+  //                fftw_amb_out[row][v_id][1] * fftw_amb_out[row][v_id][1]));
+  //   v_id_swap++;
+  // }
 
   return;
 }
@@ -117,7 +202,6 @@ void RadarData::process_ambiguity(std::atomic<bool> *exit_flag) {
     // await next sample block
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-    std::cout << "AMB\n";
     // lock iqdata and copy samples
     stream_a_data->ambiguity_iq->mutex_lock.lock();
     stream_b_data->ambiguity_iq->mutex_lock.lock();
@@ -135,7 +219,8 @@ void RadarData::process_ambiguity(std::atomic<bool> *exit_flag) {
     // Pre calculate delay signal
     for (int r_id = 0; r_id < n_range; r_id++) {
       for (int j = 0; j < delay_lag_length; j++) {
-        // Complex conjugate multiplication for delay lag (a+bi)*(c-d*i) = (a*c
+        // Complex conjugate multiplication for delay lag (a+bi)*(c-d*i) =
+        // (a*c
         // + b*d) + (b*c - a*d)*i
 
         // real
@@ -159,6 +244,7 @@ void RadarData::process_ambiguity(std::atomic<bool> *exit_flag) {
       amb_threads.front().join();
       amb_threads.pop_front();
     }
+
     ambiguity_mutex.unlock();
   }
 

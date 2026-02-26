@@ -39,14 +39,14 @@ SpecData::SpecData(Config cfg) {
   }
 
   // Set frequency vector values
-  double sample_bandwidth = static_cast<double>(cfg.receiver_cfg.fs) /
-                            static_cast<double>(cfg.receiver_cfg.dec_factor);
+  double sample_frequency =
+      static_cast<double>(cfg.receiver_cfg.fs) /
+      (1e6 * static_cast<double>(cfg.receiver_cfg.dec_factor));
   for (int i = -static_cast<int>(buffer_size) / 2;
        i < static_cast<int>(buffer_size) / 2; i++) {
-    frequency.push_back((static_cast<double>(i) * sample_bandwidth /
-                             static_cast<double>(buffer_size) +
-                         static_cast<double>(cfg.receiver_cfg.fc)) /
-                        1e6);
+    frequency.push_back(static_cast<double>(i) * sample_frequency /
+                            (static_cast<int>(buffer_size)) +
+                        static_cast<double>(cfg.receiver_cfg.fc) / 1e6);
   }
 
   // Assign DFT window

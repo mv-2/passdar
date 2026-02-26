@@ -181,8 +181,8 @@ void RadarApp::update_window(GLFWwindow *window, bool *show_window,
         }
         // Plot ambiguity copy
         ImPlot::PlotHeatmap("Range - Doppler", ambiguity_copy.data(),
-                            radar_data->n_range, radar_data->n_speed, 0, 0,
-                            NULL, hm_bound_min, hm_bound_max);
+                            radar_data->n_range, radar_data->ambiguity_columns,
+                            0, 0, NULL, hm_bound_min, hm_bound_max);
         ImPlot::EndPlot();
       }
 

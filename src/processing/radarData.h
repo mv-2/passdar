@@ -2,6 +2,7 @@
 #define RADARDATA_H
 
 #include <atomic>
+#include <complex.h>
 #include <fftw3.h>
 #include <mutex>
 #include <unistd.h>
@@ -54,6 +55,9 @@ public:
    */
   void process_ambiguity(std::atomic<bool> *exit_flag);
 
+  // number of columns in ambiguity surface
+  int ambiguity_columns;
+
 private:
   // Copied data samples
   int sample_buffer_size;
@@ -79,5 +83,10 @@ private:
    * Result arrays for output of fftw3 ambiguity calculation
    */
   std::vector<fftw_complex *> fftw_amb_out;
+
+  /*
+   * twiddle factors for pruned fft results
+   */
+  fftw_complex *twiddle_factors;
 };
 #endif
