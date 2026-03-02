@@ -13,6 +13,7 @@
 // Wave propagation velocity (I know we aren't in a vacuum)
 const double PHASE_VELOCITY = 3e8;
 
+// constant file location to store FFTW wisdom files
 const std::string AMBIGUITY_WISDOM_FILE = "cfg/ambiguity.wisdom";
 
 RadarData::RadarData(Config cfg, SpecData *_stream_a_data,
@@ -20,9 +21,10 @@ RadarData::RadarData(Config cfg, SpecData *_stream_a_data,
   // assign data stream pointers
   stream_a_data = _stream_a_data;
   stream_b_data = _stream_b_data;
+  sample_buffer_size = cfg.process_cfg.buffer_size;
 
   // Sample Frequency
-  sample_frequency = cfg.receiver_cfg.fs / cfg.receiver_cfg.dec_factor;
+  sample_frequency = cfg.receiver_cfg.fs;
 
   // Calculate range step
   range_step = PHASE_VELOCITY / sample_frequency;
@@ -31,11 +33,18 @@ RadarData::RadarData(Config cfg, SpecData *_stream_a_data,
   speed_step = (stream_a_data->frequency[1] - stream_a_data->frequency[0]) *
                1e6 * PHASE_VELOCITY / (2 * cfg.receiver_cfg.fc);
   max_speed = cfg.process_cfg.max_speed;
+
+  // calculate max_speed in line with possible speed steps
   n_speed = max_speed / speed_step;
   ambiguity_columns = 2 * n_speed - 1;
-  // n_speed = max_speed / speed_step;
-  // recalculate max_speed in line with possible speed steps
   max_speed = speed_step * n_speed;
+
+  // Check if buffer length is divisble by n_speed
+  if (sample_buffer_size % n_speed != 0) {
+    std::cerr
+        << "Sample buffer size is not divisible by number of speed points: "
+        << sample_buffer_size % n_speed << "\n";
+  }
 
   // range points
   n_range = static_cast<int>(cfg.process_cfg.max_range / range_step) + 1;
@@ -44,7 +53,6 @@ RadarData::RadarData(Config cfg, SpecData *_stream_a_data,
   ambiguity.resize(n_range * ambiguity_columns);
 
   // data copy preallocations
-  sample_buffer_size = cfg.process_cfg.buffer_size;
   data_a_copy = fftw_alloc_complex(sample_buffer_size);
   data_b_copy = fftw_alloc_complex(sample_buffer_size);
   delay_lag_length = sample_buffer_size - n_range;
@@ -66,9 +74,6 @@ RadarData::RadarData(Config cfg, SpecData *_stream_a_data,
   // Make FFTW3 plans
   fftw_amb_plans.reserve(n_range);
   for (int i = 0; i < n_range; i++) {
-    // fftw_plan p = fftw_plan_dft_1d(sample_buffer_size, delay_lag_product[i],
-    //                                fftw_amb_out[i], FFTW_FORWARD,
-    //                                FFTW_PATIENT);
     fftw_plan p = fftw_plan_many_dft(
         1, &n_speed, sample_buffer_size / n_speed, delay_lag_product[i], NULL,
         sample_buffer_size / n_speed, 1, fftw_amb_out[i], NULL, 1, n_speed,
@@ -99,7 +104,10 @@ RadarData::RadarData(Config cfg, SpecData *_stream_a_data,
 
 void RadarData::ambiguity_thread_calc(int row) {
   // FFTshift vel id
-  // int v_id_swap;
+  int v_id_swap;
+
+  // Range swap
+  int range_row_id = n_range - row - 1;
 
   // execute the FFTW business
   fftw_execute(fftw_amb_plans[row]);
@@ -170,25 +178,24 @@ void RadarData::ambiguity_thread_calc(int row) {
   }
 
   // Positive frequency assignment
-  int v_id_swap;
   for (int v_id = 0; v_id < n_speed; v_id++) {
-    v_id_swap = ambiguity_columns - v_id - 1;
-    ambiguity[row * ambiguity_columns + v_id_swap] =
+    v_id_swap = n_speed + v_id - 1;
+    ambiguity[range_row_id * ambiguity_columns + v_id_swap] =
         20 * log10(std::sqrt(
                  fftw_amb_out[row][v_id][0] * fftw_amb_out[row][v_id][0] +
                  fftw_amb_out[row][v_id][1] * fftw_amb_out[row][v_id][1]));
   }
 
   // Negative frequency assignment
-  // v_id_swap = 0;
-  // for (int v_id = sample_buffer_size - n_speed; v_id < sample_buffer_size;
-  //      v_id++) {
-  //   ambiguity[row * ambiguity_columns + v_id_swap] =
-  //       20 * log10(std::sqrt(
-  //                fftw_amb_out[row][v_id][0] * fftw_amb_out[row][v_id][0] +
-  //                fftw_amb_out[row][v_id][1] * fftw_amb_out[row][v_id][1]));
-  //   v_id_swap++;
-  // }
+  v_id_swap = 0;
+  for (int v_id = sample_buffer_size - 1; v_id > sample_buffer_size - n_speed;
+       v_id--) {
+    ambiguity[range_row_id * ambiguity_columns + v_id_swap] =
+        20 * log10(std::sqrt(
+                 fftw_amb_out[row][v_id][0] * fftw_amb_out[row][v_id][0] +
+                 fftw_amb_out[row][v_id][1] * fftw_amb_out[row][v_id][1]));
+    v_id_swap++;
+  }
 
   return;
 }

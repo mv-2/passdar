@@ -73,6 +73,8 @@ struct ReceiverConfig {
   bool rf_notch_enable;
   bool dab_notch_enable;
 
+  static const double SAMPLE_FREQUENCY_DEFAULT;
+
   ReceiverConfig(nlohmann::json json_rcv);
   ReceiverConfig();
 };

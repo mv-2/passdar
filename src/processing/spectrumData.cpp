@@ -39,9 +39,7 @@ SpecData::SpecData(Config cfg) {
   }
 
   // Set frequency vector values
-  double sample_frequency =
-      static_cast<double>(cfg.receiver_cfg.fs) /
-      (1e6 * static_cast<double>(cfg.receiver_cfg.dec_factor));
+  double sample_frequency = static_cast<double>(cfg.receiver_cfg.fs) / 1e6;
   for (int i = -static_cast<int>(buffer_size) / 2;
        i < static_cast<int>(buffer_size) / 2; i++) {
     frequency.push_back(static_cast<double>(i) * sample_frequency /

@@ -59,14 +59,15 @@ nlohmann::json cfgInterface::load_config(std::string cfg_path) {
 }
 
 ReceiverConfig::ReceiverConfig(nlohmann::json json_rcv) {
+  static const int SAMPLE_FREQUENCY_DEFAULT = 6000000;
+  dec_factor = json_rcv["dec_factor"];
   fc = json_rcv["fc"];
-  fs = json_rcv["fs"];
+  fs = SAMPLE_FREQUENCY_DEFAULT / dec_factor;
   agc_bandwidth_nr = json_rcv["agc_bandwidth_nr"];
   agc_set_point_nr = json_rcv["agc_set_point_nr"];
   gRdB_A = json_rcv["gRdB_A"];
   gRdB_B = json_rcv["gRdB_B"];
   lna_state = json_rcv["lna_state"];
-  dec_factor = json_rcv["dec_factor"];
   ifType = cfgInterface::ifType_map.at(json_rcv["if_kHz"]);
   bwType = cfgInterface::bwType_map.at(json_rcv["bw_MHz"]);
   loType = cfgInterface::loType_map.at(json_rcv["lo_MHz"]);
@@ -75,6 +76,7 @@ ReceiverConfig::ReceiverConfig(nlohmann::json json_rcv) {
 }
 
 ReceiverConfig::ReceiverConfig() {
+  // static const int SAMPLE_FREQUENCY_DEFAULT = 6000000;
   fc = 0;
   fs = 0;
   agc_bandwidth_nr = 0;

@@ -190,9 +190,14 @@ void Receiver::set_device_parameters() {
   }
 
   // Sample frequency
-  chosenDevice->rspDuoSampleFreq = fs;
+  // FIXME: Figure out this bug where sample rate cannot be set
+  if (sdrplay_api_SwapRspDuoDualTunerModeSampleRate(
+          chosenDevice->dev, &chosenDevice->rspDuoSampleFreq, fs) !=
+      sdrplay_api_Success) {
+    std::cerr << "Sample frequency not set" << std::endl;
+  }
 
-  // Tuner frequency (??)
+  // Tuner frequency
   chParams->tunerParams.rfFreq.rfHz = fc;
 
   // Decimation

@@ -1,21 +1,21 @@
 {
   "receiver": {
-    "fc": 226500000,
-    "fs": 1250000,
+    "fc": 177500000,
+    "fs": 6000000,
     "agc_bandwidth_nr": 0,
     "agc_set_point_nr": 0,
     "gRdB_A": 40,
     "gRdB_B": 40,
     "lna_state": 7,
-    "dec_factor": 1,
-    "if_kHz": 0,
+    "dec_factor": 8,
+    "if_kHz": 2048,
     "bw_MHz": 8000,
     "lo_MHz": "Auto",
     "rf_notch_enable": false,
     "dab_notch_enable": false
   },
   "processing": {
-    "buffer_size": 524088,
+    "buffer_size": 524246,
     "max_range": 60000,
     "max_speed": 350,
     "dft_window": "Hanning"

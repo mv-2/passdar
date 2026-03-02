@@ -22,7 +22,7 @@ RadarApp::RadarApp(Config _cfg) {
   stream_b_data = new SpecData(_cfg);
   radar_data = new RadarData(_cfg, stream_a_data, stream_b_data);
   cfg = _cfg;
-  ambiguity_copy.resize(radar_data->n_range * radar_data->n_speed);
+  ambiguity_copy.resize(radar_data->ambiguity_columns * radar_data->n_speed);
 }
 
 GLFWwindow *RadarApp::init_window() {
@@ -138,7 +138,9 @@ void RadarApp::update_window(GLFWwindow *window, bool *show_window,
     // Receiver spectra tab
     if (ImGui::BeginTabItem("Receiver Spectra")) {
       // Receiver subplots
-      if (ImPlot::BeginSubplots("Receiver Spectra", 2, 1, ImVec2(-1, -1))) {
+      if (ImPlot::BeginSubplots("Receiver Spectra", 2, 1, ImVec2(-1, -1),
+                                ImPlotSubplotFlags_LinkAllX |
+                                    ImPlotSubplotFlags_LinkAllY)) {
         // Receiver A plot
         ImPlot::PushColormap(SPECTRUM_COLOUR_MAP);
         if (ImPlot::BeginPlot("Receiver A")) {
@@ -188,7 +190,7 @@ void RadarApp::update_window(GLFWwindow *window, bool *show_window,
 
       // Display Colorbar
       ImGui::SameLine();
-      ImPlot::ColormapScale("Ambiguity [dB]", 30.0f, 70.0f, ImVec2(-1, -1));
+      ImPlot::ColormapScale("Ambiguity [dB]", 50.0f, 1000.0f, ImVec2(-1, -1));
 
       // Pop style stack
       ImPlot::PopColormap();
