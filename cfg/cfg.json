@@ -1,7 +1,6 @@
 {
   "receiver": {
     "fc": 177500000,
-    "fs": 6000000,
     "agc_bandwidth_nr": 0,
     "agc_set_point_nr": 0,
     "gRdB_A": 40,
