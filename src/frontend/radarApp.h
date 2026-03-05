@@ -52,6 +52,9 @@ private:
   std::thread spectrumThread_B;
   std::thread ambiguityThread;
 
+  // Ambiguity scale label
+  std::string ambiguity_label;
+
   // Frame upate function
   void update(void);
 

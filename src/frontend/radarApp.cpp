@@ -23,6 +23,13 @@ RadarApp::RadarApp(Config _cfg) {
   radar_data = new RadarData(_cfg, stream_a_data, stream_b_data);
   cfg = _cfg;
   ambiguity_copy.resize(radar_data->ambiguity_columns * radar_data->n_speed);
+  switch (cfg.process_cfg.ambiguity_scale) {
+  case DisplayScale::Linear:
+    ambiguity_label = "Ambiguity [-]";
+    break;
+  case DisplayScale::dB:
+    ambiguity_label = "Ambiguity [dB]";
+  };
 }
 
 GLFWwindow *RadarApp::init_window() {
@@ -184,13 +191,17 @@ void RadarApp::update_window(GLFWwindow *window, bool *show_window,
         // Plot ambiguity copy
         ImPlot::PlotHeatmap("Range - Doppler", ambiguity_copy.data(),
                             radar_data->n_range, radar_data->ambiguity_columns,
-                            0, 0, NULL, hm_bound_min, hm_bound_max);
+                            cfg.process_cfg.ambiguity_lims[0],
+                            cfg.process_cfg.ambiguity_lims[1], NULL,
+                            hm_bound_min, hm_bound_max);
         ImPlot::EndPlot();
       }
 
       // Display Colorbar
       ImGui::SameLine();
-      ImPlot::ColormapScale("Ambiguity [dB]", 50.0f, 1000.0f, ImVec2(-1, -1));
+      ImPlot::ColormapScale(ambiguity_label.c_str(),
+                            cfg.process_cfg.ambiguity_lims[0],
+                            cfg.process_cfg.ambiguity_lims[1], ImVec2(-1, -1));
 
       // Pop style stack
       ImPlot::PopColormap();

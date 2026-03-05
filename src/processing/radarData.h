@@ -66,6 +66,9 @@ private:
   std::vector<fftw_complex *> delay_lag_product;
   int delay_lag_length;
 
+  // Scaling for ambiguity calculation
+  DisplayScale ambiguity_scale;
+
   // sample frequency
   unsigned int sample_frequency;
 

@@ -10,6 +10,9 @@
 // DFT windowing enum
 enum class DftWindow { Rectangular, Hanning };
 
+// Scale enum
+enum class DisplayScale { Linear, dB };
+
 /*
  * Class of static functions and variables for ease of config parsing
  */
@@ -88,6 +91,8 @@ struct ProcessConfig {
   double max_speed;
   DftWindow dft_window;
   std::string _win_str;
+  DisplayScale ambiguity_scale;
+  double ambiguity_lims[2];
 
   ProcessConfig(nlohmann::json json_prcs);
   ProcessConfig();

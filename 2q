@@ -49,9 +49,6 @@ const std::unordered_map<sdrplay_api_LoModeT, std::string>
 const std::unordered_map<std::string, DftWindow> window_map = {
     {"Rectangular", DftWindow::Rectangular}, {"Hanning", DftWindow::Hanning}};
 
-const std::unordered_map<std::string, DisplayScale> scale_map = {
-    {"Linear", DisplayScale::Linear}, {"dB", DisplayScale::dB}};
-
 nlohmann::json cfgInterface::load_config(std::string cfg_path) {
   std::ifstream cfg_file(cfg_path);
   if (!cfg_file.is_open()) {
@@ -100,9 +97,6 @@ ProcessConfig::ProcessConfig(nlohmann::json json_prcs) {
   max_speed = json_prcs["max_speed"];
   dft_window = window_map.at(json_prcs["dft_window"]);
   _win_str = json_prcs["dft_window"];
-  ambiguity_scale = scale_map.at(json_prcs["ambiguity_scale"]);
-  ambiguity_lims[0] = json_prcs["ambiguity_min"];
-  ambiguity_lims[1] = json_prcs["ambiguity_max"];
 }
 
 ProcessConfig::ProcessConfig() {

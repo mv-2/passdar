@@ -100,6 +100,9 @@ RadarData::RadarData(Config cfg, SpecData *_stream_a_data,
               static_cast<double>(sample_buffer_size));
     }
   }
+
+  // Set display scale for calculation
+  ambiguity_scale = cfg.process_cfg.ambiguity_scale;
 }
 
 void RadarData::ambiguity_thread_calc(int row) {
@@ -107,7 +110,7 @@ void RadarData::ambiguity_thread_calc(int row) {
   int v_id_swap;
 
   // Range swap
-  int range_row_id = n_range - row - 1;
+  int range_row_id = row;
 
   // execute the FFTW business
   fftw_execute(fftw_amb_plans[row]);
@@ -178,23 +181,42 @@ void RadarData::ambiguity_thread_calc(int row) {
   }
 
   // Positive frequency assignment
-  for (int v_id = 0; v_id < n_speed; v_id++) {
-    v_id_swap = n_speed + v_id - 1;
-    ambiguity[range_row_id * ambiguity_columns + v_id_swap] =
-        20 * log10(std::sqrt(
-                 fftw_amb_out[row][v_id][0] * fftw_amb_out[row][v_id][0] +
-                 fftw_amb_out[row][v_id][1] * fftw_amb_out[row][v_id][1]));
-  }
+  switch (ambiguity_scale) {
+  case DisplayScale::Linear:
+    for (int v_id = 0; v_id < n_speed; v_id++) {
+      v_id_swap = n_speed + v_id - 1;
+      ambiguity[range_row_id * ambiguity_columns + v_id_swap] =
+          sqrt(fftw_amb_out[row][v_id][0] * fftw_amb_out[row][v_id][0] +
+               fftw_amb_out[row][v_id][1] * fftw_amb_out[row][v_id][1]);
+    }
 
-  // Negative frequency assignment
-  v_id_swap = 0;
-  for (int v_id = sample_buffer_size - 1; v_id > sample_buffer_size - n_speed;
-       v_id--) {
-    ambiguity[range_row_id * ambiguity_columns + v_id_swap] =
-        20 * log10(std::sqrt(
-                 fftw_amb_out[row][v_id][0] * fftw_amb_out[row][v_id][0] +
-                 fftw_amb_out[row][v_id][1] * fftw_amb_out[row][v_id][1]));
-    v_id_swap++;
+    // Negative frequency assignment
+    v_id_swap = 0;
+    for (int v_id = sample_buffer_size - 1; v_id > sample_buffer_size - n_speed;
+         v_id--) {
+      ambiguity[range_row_id * ambiguity_columns + v_id_swap] =
+          sqrt(fftw_amb_out[row][v_id][0] * fftw_amb_out[row][v_id][0] +
+               fftw_amb_out[row][v_id][1] * fftw_amb_out[row][v_id][1]);
+      v_id_swap++;
+    }
+    break;
+  case DisplayScale::dB:
+    for (int v_id = 0; v_id < n_speed; v_id++) {
+      v_id_swap = n_speed + v_id - 1;
+      ambiguity[range_row_id * ambiguity_columns + v_id_swap] =
+          10 * log10(fftw_amb_out[row][v_id][0] * fftw_amb_out[row][v_id][0] +
+                     fftw_amb_out[row][v_id][1] * fftw_amb_out[row][v_id][1]);
+    }
+
+    // Negative frequency assignment
+    v_id_swap = 0;
+    for (int v_id = sample_buffer_size - 1; v_id > sample_buffer_size - n_speed;
+         v_id--) {
+      ambiguity[range_row_id * ambiguity_columns + v_id_swap] =
+          10 * log10(fftw_amb_out[row][v_id][0] * fftw_amb_out[row][v_id][0] +
+                     fftw_amb_out[row][v_id][1] * fftw_amb_out[row][v_id][1]);
+      v_id_swap++;
+    }
   }
 
   return;
