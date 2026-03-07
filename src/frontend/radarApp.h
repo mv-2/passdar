@@ -11,7 +11,6 @@
 #include "../hardwareInterface/cfgInterface.h"
 #include "../hardwareInterface/sdrCapture.h"
 #include "../processing/radarData.h"
-#include "imgui.h"
 
 class RadarApp {
 public:
@@ -73,15 +72,18 @@ private:
   // Ambiguity scale label
   std::string ambiguity_label;
 
-  // Frame update function
+  // Frame update functions
   void update(void);
+  void receiver_spectra_frame_update(void);
+  void range_doppler_frame_update(void);
+  void ambiguity_slice_frame_update(void);
+  void settings_frame_update(void);
 
   // Create ImGui window
   GLFWwindow *init_window(void);
 
   // Update window
-  void update_window(GLFWwindow *window, bool *show_window, ImVec2 hm_bound_min,
-                     ImVec2 hm_bound_max);
+  void update_window(GLFWwindow *window, bool *show_window);
 
   // Config
   Config cfg;

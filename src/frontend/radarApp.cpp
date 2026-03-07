@@ -133,13 +133,9 @@ void RadarApp::run() {
   // Window open flag
   bool show_window = true;
 
-  // Heatmap parameters
-  ImVec2 hm_bound_min = ImVec2(-radar_data->max_speed, 0);
-  ImVec2 hm_bound_max =
-      ImVec2(radar_data->max_speed, cfg.process_cfg.max_range);
-
+  // Run and update frames
   while (show_window && !glfwWindowShouldClose(window)) {
-    update_window(window, &show_window, hm_bound_min, hm_bound_max);
+    update_window(window, &show_window);
   }
 
   // Cleanup
@@ -158,8 +154,344 @@ void RadarApp::run() {
   captureThread.join();
 }
 
-void RadarApp::update_window(GLFWwindow *window, bool *show_window,
-                             ImVec2 hm_bound_min, ImVec2 hm_bound_max) {
+void RadarApp::receiver_spectra_frame_update(void) {
+  // Receiver subplots
+  if (ImPlot::BeginSubplots("Receiver Spectra", 2, 1, ImVec2(-1, -1),
+                            ImPlotSubplotFlags_LinkAllX |
+                                ImPlotSubplotFlags_LinkAllY)) {
+    // Receiver A plot
+    ImPlot::PushColormap(SPECTRUM_COLOUR_MAP);
+    if (ImPlot::BeginPlot("Receiver A", ImVec2(-1, 0), ImPlotFlags_NoLegend)) {
+
+      // Setup and labels
+      ImPlot::SetupAxes("Frequency [MHz]", "Amplitude [dB]");
+      stream_a_data->mutex_lock.lock();
+
+      // Plot
+      ImPlot::PlotLine("Receiver A", stream_a_data->frequency.data(),
+                       stream_a_data->spectrum.data(),
+                       stream_a_data->frequency.size());
+      stream_a_data->mutex_lock.unlock();
+
+      ImPlot::EndPlot();
+    }
+    // Receiver B plot
+    if (ImPlot::BeginPlot("Receiver B", ImVec2(-1, 0), ImPlotFlags_NoLegend)) {
+
+      // Setup and labels
+      ImPlot::SetupAxes("Frequency [MHz]", "Amplitude [dB]");
+      stream_b_data->mutex_lock.lock();
+
+      // Plot
+      ImPlot::PlotLine("Receiver B", stream_b_data->frequency.data(),
+                       stream_b_data->spectrum.data(),
+                       stream_b_data->frequency.size());
+      stream_b_data->mutex_lock.unlock();
+
+      ImPlot::EndPlot();
+    }
+
+    ImPlot::PopColormap();
+    ImPlot::EndSubplots();
+  }
+}
+
+void RadarApp::range_doppler_frame_update(void) {
+  int plot_width = ImGui::GetContentRegionAvail().x - COLOURBAR_WIDTH -
+                   ImGui::GetStyle().ItemSpacing.x;
+  // Set heatmap style
+  ImPlot::PushColormap(AMBIGUITY_COLOUR_MAP);
+
+  // Range - Doppler plot
+  if (ImPlot::BeginPlot("Range - Doppler", ImVec2(plot_width, -1),
+                        ImPlotFlags_NoLegend)) {
+    ImPlot::SetupAxes("Speed [m/s]", "Range [m]");
+
+    // Set ambiguity to latest data if available
+    if (radar_data->ambiguity_mutex.try_lock()) {
+      ambiguity_copy = radar_data->ambiguity;
+      radar_data->ambiguity_mutex.unlock();
+    }
+
+    // Plot ambiguity copy
+    ImPlot::PlotHeatmap(
+        "Range - Doppler", ambiguity_copy.data(), radar_data->n_range,
+        radar_data->ambiguity_columns, cfg.process_cfg.ambiguity_lims[0],
+        cfg.process_cfg.ambiguity_lims[1], NULL, {-radar_data->max_speed, 0},
+        {radar_data->max_speed, cfg.process_cfg.max_range});
+
+    ImPlot::EndPlot();
+  }
+
+  // Display Colorbar
+  ImGui::SameLine();
+  ImPlot::ColormapScale(ambiguity_label.c_str(),
+                        cfg.process_cfg.ambiguity_lims[0],
+                        cfg.process_cfg.ambiguity_lims[1], ImVec2(-1, -1));
+
+  // Pop style stack
+  ImPlot::PopColormap();
+}
+
+void RadarApp::ambiguity_slice_frame_update(void) {
+
+  int window_width = ImGui::GetContentRegionAvail().x;
+  int half_width =
+      ImGui::GetContentRegionAvail().x / 2 - ImGui::GetStyle().ItemSpacing.x;
+  // Reload slices when available
+  if (radar_data->ambiguity_mutex.try_lock()) {
+
+    // Assign speed values at range point
+    for (int i = 0; i < radar_data->ambiguity_columns; i++) {
+      range_slice[i] =
+          radar_data
+              ->ambiguity[range_slider * radar_data->ambiguity_columns + i];
+    }
+
+    // Assign range values at speed point
+    for (int i = 0; i < radar_data->n_range; i++) {
+      speed_slice[i] =
+          radar_data->ambiguity[i * radar_data->ambiguity_columns +
+                                speed_slider + radar_data->n_speed];
+    }
+
+    radar_data->ambiguity_mutex.unlock();
+  }
+
+  // Range slider label
+  std::string label_text = std::format("Range Selection: %.0f [m]",
+                                       range_slider * radar_data->range_step);
+  float text_width = ImGui::CalcTextSize(label_text.c_str()).x;
+  ImGui::SetCursorPosX((window_width - text_width) / 4);
+  ImGui::Text("Range Selection: %.0f [m]",
+              range_slider * radar_data->range_step);
+  ImGui::SameLine();
+
+  // Speed slider label
+  label_text = std::format("Speed Selection: %.1f [m/s]",
+                           range_slider * radar_data->range_step);
+  text_width = ImGui::CalcTextSize(label_text.c_str()).x;
+  ImGui::SetCursorPosX((window_width - text_width) * 3 / 4);
+  ImGui::Text("Speed Selection: %.1f [m/s]",
+              speed_slider * radar_data->speed_step);
+
+  // Range slider
+  ImGui::PushItemWidth(half_width);
+  ImGui::SliderInt("##Range ID", &range_slider, 0, radar_data->n_range - 1, "");
+
+  ImGui::PopItemWidth();
+
+  // Speed Slider
+  ImGui::SameLine();
+  ImGui::PushItemWidth(half_width);
+  ImGui::SliderInt("##Speed ID", &speed_slider, -radar_data->n_speed,
+                   radar_data->n_speed, "");
+  ImGui::PopItemWidth();
+
+  // Slice Subplots
+  if (ImPlot::BeginSubplots("Ambiguity Slices", 2, 1, ImVec2(-1, -1))) {
+    // Range Slice plot
+    ImPlot::PushColormap(SPECTRUM_COLOUR_MAP);
+    if (ImPlot::BeginPlot("Range Slice", ImVec2(-1, -1),
+                          ImPlotFlags_NoLegend)) {
+
+      // Axes limits and labels
+      ImPlot::SetupAxes("Speed [m/s]", ambiguity_label.c_str());
+      ImPlot::SetupAxisLimits(ImAxis_X1, speed_vals.front(), speed_vals.back(),
+                              ImGuiCond_Always);
+      ImPlot::SetupAxisLimits(ImAxis_Y1, cfg.process_cfg.ambiguity_lims[0],
+                              cfg.process_cfg.ambiguity_lims[1],
+                              ImGuiCond_Always);
+
+      // Plot
+      ImPlot::PlotLine("Range Slice", speed_vals.data(), range_slice.data(),
+                       range_slice.size());
+
+      ImPlot::EndPlot();
+    }
+
+    // Speed Slice plot
+    if (ImPlot::BeginPlot("Speed Slice", ImVec2(-1, -1),
+                          ImPlotFlags_NoLegend)) {
+
+      // Axes limits and labels
+      ImPlot::SetupAxes("Range [m]", ambiguity_label.c_str());
+      ImPlot::SetupAxisLimits(ImAxis_X1, range_vals.front(), range_vals.back(),
+                              ImGuiCond_Always);
+      ImPlot::SetupAxisLimits(ImAxis_Y1, cfg.process_cfg.ambiguity_lims[0],
+                              cfg.process_cfg.ambiguity_lims[1],
+                              ImGuiCond_Always);
+
+      // plot
+      ImPlot::PlotLine("Speed Slice", range_vals.data(), speed_slice.data(),
+                       speed_slice.size());
+
+      ImPlot::EndPlot();
+    }
+
+    ImPlot::PopColormap();
+    ImPlot::EndSubplots();
+  }
+}
+
+void RadarApp::settings_frame_update(void) {
+
+  // Config settings
+  ImGuiTableFlags table_flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
+  if (ImGui::BeginTable("Receiver Settings", 2, table_flags)) {
+
+    ImGui::TableSetupColumn("Receiver Setting");
+    ImGui::TableSetupColumn("Value");
+    ImGui::TableHeadersRow();
+
+    // centre frequency
+    ImGui::TableNextRow();
+    ImGui::TableNextColumn();
+    ImGui::Text("Centre Frequency");
+    ImGui::TableNextColumn();
+    ImGui::Text("%d MHz", cfg.receiver_cfg.fc / 1000000);
+
+    // Sample frequency
+    ImGui::TableNextRow();
+    ImGui::TableNextColumn();
+    ImGui::Text("Sample Frequency");
+    ImGui::TableNextColumn();
+    ImGui::Text("%d kHz", cfg.receiver_cfg.fs / 1000);
+
+    // agc_bandwidth_nr
+    ImGui::TableNextRow();
+    ImGui::TableNextColumn();
+    ImGui::Text("AGC Bandwidth");
+    ImGui::TableNextColumn();
+    ImGui::Text("%d", cfg.receiver_cfg.agc_bandwidth_nr);
+
+    // agc_set_point_nr
+    ImGui::TableNextRow();
+    ImGui::TableNextColumn();
+    ImGui::Text("AGC Set Point");
+    ImGui::TableNextColumn();
+    ImGui::Text("%d", cfg.receiver_cfg.agc_set_point_nr);
+
+    // Gain reduction receiver A
+    ImGui::TableNextRow();
+    ImGui::TableNextColumn();
+    ImGui::Text("Gain Reduction Receiver A");
+    ImGui::TableNextColumn();
+    ImGui::Text("%d dB", cfg.receiver_cfg.gRdB_A);
+
+    // Gain reduction receiver B
+    ImGui::TableNextRow();
+    ImGui::TableNextColumn();
+    ImGui::Text("Gain Reduction Receiver B");
+    ImGui::TableNextColumn();
+    ImGui::Text("%d dB", cfg.receiver_cfg.gRdB_B);
+
+    // LNA State
+    ImGui::TableNextRow();
+    ImGui::TableNextColumn();
+    ImGui::Text("LNA State");
+    ImGui::TableNextColumn();
+    ImGui::Text("%d", cfg.receiver_cfg.lna_state);
+
+    // Decimation Factor
+    ImGui::TableNextRow();
+    ImGui::TableNextColumn();
+    ImGui::Text("Decimation Factor");
+    ImGui::TableNextColumn();
+    ImGui::Text("%d", cfg.receiver_cfg.dec_factor);
+
+    // IF type
+    ImGui::TableNextRow();
+    ImGui::TableNextColumn();
+    ImGui::Text("IF");
+    ImGui::TableNextColumn();
+    ImGui::Text("%d kHz", cfgInterface::ifNum_map.at(cfg.receiver_cfg.ifType));
+
+    // BW type
+    ImGui::TableNextRow();
+    ImGui::TableNextColumn();
+    ImGui::Text("Bandwidth");
+    ImGui::TableNextColumn();
+    ImGui::Text("%d MHz", cfgInterface::bwNum_map.at(cfg.receiver_cfg.bwType));
+
+    // LO type
+    ImGui::TableNextRow();
+    ImGui::TableNextColumn();
+    ImGui::Text("LO");
+    ImGui::TableNextColumn();
+    ImGui::Text("%s MHz",
+                cfgInterface::loStr_map.at(cfg.receiver_cfg.loType).c_str());
+
+    // RF Notch
+    ImGui::TableNextRow();
+    ImGui::TableNextColumn();
+    ImGui::Text("RF Notch Filter");
+    ImGui::TableNextColumn();
+    ImGui::Text("%s",
+                cfg.receiver_cfg.rf_notch_enable ? "Enabled" : "Disabled");
+
+    // DAB Notch
+    ImGui::TableNextRow();
+    ImGui::TableNextColumn();
+    ImGui::Text("DAB Notch Filter");
+    ImGui::TableNextColumn();
+    ImGui::Text("%s",
+                cfg.receiver_cfg.dab_notch_enable ? "Enabled" : "Disabled");
+
+    ImGui::EndTable();
+  }
+  if (ImGui::BeginTable("Processing Settings", 2, table_flags)) {
+    ImGui::TableSetupColumn("Processing Setting");
+    ImGui::TableSetupColumn("Value");
+    ImGui::TableHeadersRow();
+
+    // Buffer size
+    ImGui::TableNextRow();
+    ImGui::TableNextColumn();
+    ImGui::Text("Sample Buffer Size");
+    ImGui::TableNextColumn();
+    ImGui::Text("%d", cfg.process_cfg.buffer_size);
+
+    // Window
+    ImGui::TableNextRow();
+    ImGui::TableNextColumn();
+    ImGui::Text("Window");
+    ImGui::TableNextColumn();
+    ImGui::Text("%s", cfg.process_cfg._win_str.c_str());
+
+    // Max range
+    ImGui::TableNextRow();
+    ImGui::TableNextColumn();
+    ImGui::Text("Max Range");
+    ImGui::TableNextColumn();
+    ImGui::Text("%.1lf m", cfg.process_cfg.max_range);
+
+    // Range step
+    ImGui::TableNextRow();
+    ImGui::TableNextColumn();
+    ImGui::Text("Range Step");
+    ImGui::TableNextColumn();
+    ImGui::Text("%.1lf m", radar_data->range_step);
+
+    // Max Speed
+    ImGui::TableNextRow();
+    ImGui::TableNextColumn();
+    ImGui::Text("Max Speed");
+    ImGui::TableNextColumn();
+    ImGui::Text("%.1lf m/s", cfg.process_cfg.max_speed);
+
+    // Speed step
+    ImGui::TableNextRow();
+    ImGui::TableNextColumn();
+    ImGui::Text("Speed Step");
+    ImGui::TableNextColumn();
+    ImGui::Text("%.1lf m/s", radar_data->speed_step);
+    ImGui::EndTable();
+  }
+}
+
+void RadarApp::update_window(GLFWwindow *window, bool *show_window) {
+
   glfwPollEvents();
 
   // ImGui Frame
@@ -172,364 +504,31 @@ void RadarApp::update_window(GLFWwindow *window, bool *show_window,
   ImGui::Begin("Passdar", show_window);
 
   // Calculate required area values
-  int window_width = ImGui::GetContentRegionAvail().x;
-  int plot_width = ImGui::GetContentRegionAvail().x - COLOURBAR_WIDTH -
-                   ImGui::GetStyle().ItemSpacing.x;
-  int half_width =
-      ImGui::GetContentRegionAvail().x / 2 - ImGui::GetStyle().ItemSpacing.x;
 
   // Tab bar to select each function
   if (ImGui::BeginTabBar("Passdar")) {
 
     // Receiver spectra tab
     if (ImGui::BeginTabItem("Receiver Spectra")) {
-
-      // Receiver subplots
-      if (ImPlot::BeginSubplots("Receiver Spectra", 2, 1, ImVec2(-1, -1),
-                                ImPlotSubplotFlags_LinkAllX |
-                                    ImPlotSubplotFlags_LinkAllY)) {
-        // Receiver A plot
-        ImPlot::PushColormap(SPECTRUM_COLOUR_MAP);
-        if (ImPlot::BeginPlot("Receiver A", ImVec2(-1, 0),
-                              ImPlotFlags_NoLegend)) {
-
-          // Setup and labels
-          ImPlot::SetupAxes("Frequency [MHz]", "Amplitude [dB]");
-          stream_a_data->mutex_lock.lock();
-
-          // Plot
-          ImPlot::PlotLine("Receiver A", stream_a_data->frequency.data(),
-                           stream_a_data->spectrum.data(),
-                           stream_a_data->frequency.size());
-          stream_a_data->mutex_lock.unlock();
-
-          ImPlot::EndPlot();
-        }
-        // Receiver B plot
-        if (ImPlot::BeginPlot("Receiver B", ImVec2(-1, 0),
-                              ImPlotFlags_NoLegend)) {
-
-          // Setup and labels
-          ImPlot::SetupAxes("Frequency [MHz]", "Amplitude [dB]");
-          stream_b_data->mutex_lock.lock();
-
-          // Plot
-          ImPlot::PlotLine("Receiver B", stream_b_data->frequency.data(),
-                           stream_b_data->spectrum.data(),
-                           stream_b_data->frequency.size());
-          stream_b_data->mutex_lock.unlock();
-
-          ImPlot::EndPlot();
-        }
-
-        ImPlot::PopColormap();
-        ImPlot::EndSubplots();
-      }
-
+      receiver_spectra_frame_update();
       ImGui::EndTabItem();
     }
 
     // Range - Doppler heatmap tab
     if (ImGui::BeginTabItem("Range - Doppler")) {
-
-      // Set heatmap style
-      ImPlot::PushColormap(AMBIGUITY_COLOUR_MAP);
-
-      // Range - Doppler plot
-      if (ImPlot::BeginPlot("Range - Doppler", ImVec2(plot_width, -1),
-                            ImPlotFlags_NoLegend)) {
-        ImPlot::SetupAxes("Speed [m/s]", "Range [m]");
-
-        // Set ambiguity to latest data if available
-        if (radar_data->ambiguity_mutex.try_lock()) {
-          ambiguity_copy = radar_data->ambiguity;
-          radar_data->ambiguity_mutex.unlock();
-        }
-
-        // Plot ambiguity copy
-        ImPlot::PlotHeatmap("Range - Doppler", ambiguity_copy.data(),
-                            radar_data->n_range, radar_data->ambiguity_columns,
-                            cfg.process_cfg.ambiguity_lims[0],
-                            cfg.process_cfg.ambiguity_lims[1], NULL,
-                            hm_bound_min, hm_bound_max);
-
-        ImPlot::EndPlot();
-      }
-
-      // Display Colorbar
-      ImGui::SameLine();
-      ImPlot::ColormapScale(ambiguity_label.c_str(),
-                            cfg.process_cfg.ambiguity_lims[0],
-                            cfg.process_cfg.ambiguity_lims[1], ImVec2(-1, -1));
-
-      // Pop style stack
-      ImPlot::PopColormap();
-
+      range_doppler_frame_update();
       ImGui::EndTabItem();
     }
 
     // Ambiguity slices
     if (ImGui::BeginTabItem("Ambiguity Slices")) {
-
-      // Reload slices when available
-      if (radar_data->ambiguity_mutex.try_lock()) {
-
-        // Assign speed values at range point
-        for (int i = 0; i < radar_data->ambiguity_columns; i++) {
-          range_slice[i] =
-              radar_data
-                  ->ambiguity[range_slider * radar_data->ambiguity_columns + i];
-        }
-
-        // Assign range values at speed point
-        for (int i = 0; i < radar_data->n_range; i++) {
-          speed_slice[i] =
-              radar_data->ambiguity[i * radar_data->ambiguity_columns +
-                                    speed_slider + radar_data->n_speed];
-        }
-
-        radar_data->ambiguity_mutex.unlock();
-      }
-
-      // Range slider label
-      std::string label_text = std::format(
-          "Range Selection: %.0f [m]", range_slider * radar_data->range_step);
-      float text_width = ImGui::CalcTextSize(label_text.c_str()).x;
-      ImGui::SetCursorPosX((window_width - text_width) / 4);
-      ImGui::Text("Range Selection: %.0f [m]",
-                  range_slider * radar_data->range_step);
-      ImGui::SameLine();
-
-      // Speed slider label
-      label_text = std::format("Speed Selection: %.1f [m/s]",
-                               range_slider * radar_data->range_step);
-      text_width = ImGui::CalcTextSize(label_text.c_str()).x;
-      ImGui::SetCursorPosX((window_width - text_width) * 3 / 4);
-      ImGui::Text("Speed Selection: %.1f [m/s]",
-                  speed_slider * radar_data->speed_step);
-
-      // Range slider
-      ImGui::PushItemWidth(half_width);
-      ImGui::SliderInt("##Range ID", &range_slider, 0, radar_data->n_range - 1,
-                       "");
-
-      ImGui::PopItemWidth();
-
-      // Speed Slider
-      ImGui::SameLine();
-      ImGui::PushItemWidth(half_width);
-      ImGui::SliderInt("##Speed ID", &speed_slider, -radar_data->n_speed,
-                       radar_data->n_speed, "");
-      ImGui::PopItemWidth();
-
-      // Slice Subplots
-      if (ImPlot::BeginSubplots("Ambiguity Slices", 2, 1, ImVec2(-1, -1))) {
-        // Range Slice plot
-        ImPlot::PushColormap(SPECTRUM_COLOUR_MAP);
-        if (ImPlot::BeginPlot("Range Slice", ImVec2(-1, -1),
-                              ImPlotFlags_NoLegend)) {
-
-          // Axes limits and labels
-          ImPlot::SetupAxes("Speed [m/s]", ambiguity_label.c_str());
-          ImPlot::SetupAxisLimits(ImAxis_X1, speed_vals.front(),
-                                  speed_vals.back(), ImGuiCond_Always);
-          ImPlot::SetupAxisLimits(ImAxis_Y1, cfg.process_cfg.ambiguity_lims[0],
-                                  cfg.process_cfg.ambiguity_lims[1],
-                                  ImGuiCond_Always);
-
-          // Plot
-          ImPlot::PlotLine("Range Slice", speed_vals.data(), range_slice.data(),
-                           range_slice.size());
-
-          ImPlot::EndPlot();
-        }
-
-        // Speed Slice plot
-        if (ImPlot::BeginPlot("Speed Slice", ImVec2(-1, -1),
-                              ImPlotFlags_NoLegend)) {
-
-          // Axes limits and labels
-          ImPlot::SetupAxes("Range [m]", ambiguity_label.c_str());
-          ImPlot::SetupAxisLimits(ImAxis_X1, range_vals.front(),
-                                  range_vals.back(), ImGuiCond_Always);
-          ImPlot::SetupAxisLimits(ImAxis_Y1, cfg.process_cfg.ambiguity_lims[0],
-                                  cfg.process_cfg.ambiguity_lims[1],
-                                  ImGuiCond_Always);
-
-          // plot
-          ImPlot::PlotLine("Speed Slice", range_vals.data(), speed_slice.data(),
-                           speed_slice.size());
-
-          ImPlot::EndPlot();
-        }
-
-        ImPlot::PopColormap();
-        ImPlot::EndSubplots();
-      }
-
+      ambiguity_slice_frame_update();
       ImGui::EndTabItem();
     }
 
     // Config settings tab
     if (ImGui::BeginTabItem("Settings")) {
-
-      // Config settings
-      ImGuiTableFlags table_flags =
-          ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
-      if (ImGui::BeginTable("Receiver Settings", 2, table_flags)) {
-
-        ImGui::TableSetupColumn("Receiver Setting");
-        ImGui::TableSetupColumn("Value");
-        ImGui::TableHeadersRow();
-
-        // centre frequency
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn();
-        ImGui::Text("Centre Frequency");
-        ImGui::TableNextColumn();
-        ImGui::Text("%d MHz", cfg.receiver_cfg.fc / 1000000);
-
-        // Sample frequency
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn();
-        ImGui::Text("Sample Frequency");
-        ImGui::TableNextColumn();
-        ImGui::Text("%d kHz", cfg.receiver_cfg.fs / 1000);
-
-        // agc_bandwidth_nr
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn();
-        ImGui::Text("AGC Bandwidth");
-        ImGui::TableNextColumn();
-        ImGui::Text("%d", cfg.receiver_cfg.agc_bandwidth_nr);
-
-        // agc_set_point_nr
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn();
-        ImGui::Text("AGC Set Point");
-        ImGui::TableNextColumn();
-        ImGui::Text("%d", cfg.receiver_cfg.agc_set_point_nr);
-
-        // Gain reduction receiver A
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn();
-        ImGui::Text("Gain Reduction Receiver A");
-        ImGui::TableNextColumn();
-        ImGui::Text("%d dB", cfg.receiver_cfg.gRdB_A);
-
-        // Gain reduction receiver B
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn();
-        ImGui::Text("Gain Reduction Receiver B");
-        ImGui::TableNextColumn();
-        ImGui::Text("%d dB", cfg.receiver_cfg.gRdB_B);
-
-        // LNA State
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn();
-        ImGui::Text("LNA State");
-        ImGui::TableNextColumn();
-        ImGui::Text("%d", cfg.receiver_cfg.lna_state);
-
-        // Decimation Factor
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn();
-        ImGui::Text("Decimation Factor");
-        ImGui::TableNextColumn();
-        ImGui::Text("%d", cfg.receiver_cfg.dec_factor);
-
-        // IF type
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn();
-        ImGui::Text("IF");
-        ImGui::TableNextColumn();
-        ImGui::Text("%d kHz",
-                    cfgInterface::ifNum_map.at(cfg.receiver_cfg.ifType));
-
-        // BW type
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn();
-        ImGui::Text("Bandwidth");
-        ImGui::TableNextColumn();
-        ImGui::Text("%d MHz",
-                    cfgInterface::bwNum_map.at(cfg.receiver_cfg.bwType));
-
-        // LO type
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn();
-        ImGui::Text("LO");
-        ImGui::TableNextColumn();
-        ImGui::Text(
-            "%s MHz",
-            cfgInterface::loStr_map.at(cfg.receiver_cfg.loType).c_str());
-
-        // RF Notch
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn();
-        ImGui::Text("RF Notch Filter");
-        ImGui::TableNextColumn();
-        ImGui::Text("%s",
-                    cfg.receiver_cfg.rf_notch_enable ? "Enabled" : "Disabled");
-
-        // DAB Notch
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn();
-        ImGui::Text("DAB Notch Filter");
-        ImGui::TableNextColumn();
-        ImGui::Text("%s",
-                    cfg.receiver_cfg.dab_notch_enable ? "Enabled" : "Disabled");
-
-        ImGui::EndTable();
-      }
-      if (ImGui::BeginTable("Processing Settings", 2, table_flags)) {
-        ImGui::TableSetupColumn("Processing Setting");
-        ImGui::TableSetupColumn("Value");
-        ImGui::TableHeadersRow();
-
-        // Buffer size
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn();
-        ImGui::Text("Sample Buffer Size");
-        ImGui::TableNextColumn();
-        ImGui::Text("%d", cfg.process_cfg.buffer_size);
-
-        // Window
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn();
-        ImGui::Text("Window");
-        ImGui::TableNextColumn();
-        ImGui::Text("%s", cfg.process_cfg._win_str.c_str());
-
-        // Max range
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn();
-        ImGui::Text("Max Range");
-        ImGui::TableNextColumn();
-        ImGui::Text("%.1lf m", cfg.process_cfg.max_range);
-
-        // Range step
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn();
-        ImGui::Text("Range Step");
-        ImGui::TableNextColumn();
-        ImGui::Text("%.1lf m", radar_data->range_step);
-
-        // Max Speed
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn();
-        ImGui::Text("Max Speed");
-        ImGui::TableNextColumn();
-        ImGui::Text("%.1lf m/s", cfg.process_cfg.max_speed);
-
-        // Speed step
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn();
-        ImGui::Text("Speed Step");
-        ImGui::TableNextColumn();
-        ImGui::Text("%.1lf m/s", radar_data->speed_step);
-
-        ImGui::EndTable();
-      }
+      settings_frame_update();
       ImGui::EndTabItem();
     }
     ImGui::EndTabBar();
