@@ -12,17 +12,41 @@
 #include "implot.h"
 #include "radarApp.h"
 
+// Display constants
 const ImPlotColormap SPECTRUM_COLOUR_MAP = ImPlotColormap_Spectral;
 const ImPlotColormap AMBIGUITY_COLOUR_MAP = ImPlotColormap_Jet;
 const int COLOURBAR_WIDTH = 100;
 
 RadarApp::RadarApp(Config _cfg) {
+  // Initialise capture & processing objects
   receiver = new Receiver(_cfg.receiver_cfg);
   stream_a_data = new SpecData(_cfg);
   stream_b_data = new SpecData(_cfg);
   radar_data = new RadarData(_cfg, stream_a_data, stream_b_data);
+
+  // config
   cfg = _cfg;
+
+  // Preallocate vectors
   ambiguity_copy.resize(radar_data->ambiguity_columns * radar_data->n_speed);
+  range_slice.resize(radar_data->ambiguity_columns);
+  speed_slice.resize(radar_data->n_range);
+
+  // Initilaise slider values
+  range_slider = 0;
+  speed_slider = 0;
+
+  // Calculate range values
+  for (int i = 0; i < radar_data->n_range; i++) {
+    range_vals.push_back(static_cast<double>(i) * radar_data->range_step);
+  }
+
+  // Calculate speed values
+  for (int i = -radar_data->n_speed; i < radar_data->n_speed; i++) {
+    speed_vals.push_back(static_cast<double>(i) * radar_data->speed_step);
+  }
+
+  // Set ambiguity scales label
   switch (cfg.process_cfg.ambiguity_scale) {
   case DisplayScale::Linear:
     ambiguity_label = "Ambiguity [-]";
@@ -137,63 +161,88 @@ void RadarApp::update_window(GLFWwindow *window, bool *show_window,
   ImGui::SetNextWindowSize(viewport->Size);
   ImGui::Begin("Passdar", show_window);
 
-  int heatmap_width = ImGui::GetContentRegionAvail().x - COLOURBAR_WIDTH -
-                      ImGui::GetStyle().ItemSpacing.x;
+  // Calculate required area values
+  int window_width = ImGui::GetContentRegionAvail().x;
+  int plot_width = ImGui::GetContentRegionAvail().x - COLOURBAR_WIDTH -
+                   ImGui::GetStyle().ItemSpacing.x;
+  int half_width =
+      ImGui::GetContentRegionAvail().x / 2 - ImGui::GetStyle().ItemSpacing.x;
 
   // Tab bar to select each function
   if (ImGui::BeginTabBar("Passdar")) {
+
     // Receiver spectra tab
     if (ImGui::BeginTabItem("Receiver Spectra")) {
+
       // Receiver subplots
       if (ImPlot::BeginSubplots("Receiver Spectra", 2, 1, ImVec2(-1, -1),
                                 ImPlotSubplotFlags_LinkAllX |
                                     ImPlotSubplotFlags_LinkAllY)) {
         // Receiver A plot
         ImPlot::PushColormap(SPECTRUM_COLOUR_MAP);
-        if (ImPlot::BeginPlot("Receiver A")) {
+        if (ImPlot::BeginPlot("Receiver A", ImVec2(-1, 0),
+                              ImPlotFlags_NoLegend)) {
+
+          // Setup and labels
           ImPlot::SetupAxes("Frequency [MHz]", "Amplitude [dB]");
           stream_a_data->mutex_lock.lock();
+
+          // Plot
           ImPlot::PlotLine("Receiver A", stream_a_data->frequency.data(),
                            stream_a_data->spectrum.data(),
                            stream_a_data->frequency.size());
           stream_a_data->mutex_lock.unlock();
+
           ImPlot::EndPlot();
         }
         // Receiver B plot
-        if (ImPlot::BeginPlot("Receiver B")) {
+        if (ImPlot::BeginPlot("Receiver B", ImVec2(-1, 0),
+                              ImPlotFlags_NoLegend)) {
+
+          // Setup and labels
           ImPlot::SetupAxes("Frequency [MHz]", "Amplitude [dB]");
           stream_b_data->mutex_lock.lock();
+
+          // Plot
           ImPlot::PlotLine("Receiver B", stream_b_data->frequency.data(),
                            stream_b_data->spectrum.data(),
                            stream_b_data->frequency.size());
           stream_b_data->mutex_lock.unlock();
+
           ImPlot::EndPlot();
         }
+
         ImPlot::PopColormap();
         ImPlot::EndSubplots();
       }
+
       ImGui::EndTabItem();
     }
 
     // Range - Doppler heatmap tab
     if (ImGui::BeginTabItem("Range - Doppler")) {
-      // Range - Doppler plot
 
       // Set heatmap style
       ImPlot::PushColormap(AMBIGUITY_COLOUR_MAP);
-      if (ImPlot::BeginPlot("Range - Doppler", ImVec2(heatmap_width, -1))) {
+
+      // Range - Doppler plot
+      if (ImPlot::BeginPlot("Range - Doppler", ImVec2(plot_width, -1),
+                            ImPlotFlags_NoLegend)) {
         ImPlot::SetupAxes("Speed [m/s]", "Range [m]");
+
         // Set ambiguity to latest data if available
         if (radar_data->ambiguity_mutex.try_lock()) {
           ambiguity_copy = radar_data->ambiguity;
           radar_data->ambiguity_mutex.unlock();
         }
+
         // Plot ambiguity copy
         ImPlot::PlotHeatmap("Range - Doppler", ambiguity_copy.data(),
                             radar_data->n_range, radar_data->ambiguity_columns,
                             cfg.process_cfg.ambiguity_lims[0],
                             cfg.process_cfg.ambiguity_lims[1], NULL,
                             hm_bound_min, hm_bound_max);
+
         ImPlot::EndPlot();
       }
 
@@ -209,12 +258,116 @@ void RadarApp::update_window(GLFWwindow *window, bool *show_window,
       ImGui::EndTabItem();
     }
 
+    // Ambiguity slices
+    if (ImGui::BeginTabItem("Ambiguity Slices")) {
+
+      // Reload slices when available
+      if (radar_data->ambiguity_mutex.try_lock()) {
+
+        // Assign speed values at range point
+        for (int i = 0; i < radar_data->ambiguity_columns; i++) {
+          range_slice[i] =
+              radar_data
+                  ->ambiguity[range_slider * radar_data->ambiguity_columns + i];
+        }
+
+        // Assign range values at speed point
+        for (int i = 0; i < radar_data->n_range; i++) {
+          speed_slice[i] =
+              radar_data
+                  ->ambiguity[i * radar_data->ambiguity_columns + speed_slider];
+        }
+
+        radar_data->ambiguity_mutex.unlock();
+      }
+
+      // Range slider label
+      std::string label_text = std::format(
+          "Range Selection: %.0f [m]", range_slider * radar_data->range_step);
+      float text_width = ImGui::CalcTextSize(label_text.c_str()).x;
+      ImGui::SetCursorPosX((window_width - text_width) / 4);
+      ImGui::Text("Range Selection: %.0f [m]",
+                  range_slider * radar_data->range_step);
+      ImGui::SameLine();
+
+      // Speed slider label
+      label_text = std::format("Speed Selection: %.1f [m/s]",
+                               range_slider * radar_data->range_step);
+      text_width = ImGui::CalcTextSize(label_text.c_str()).x;
+      ImGui::SetCursorPosX((window_width - text_width) * 3 / 4);
+      ImGui::Text("Speed Selection: %.1f [m/s]",
+                  speed_slider * radar_data->speed_step);
+
+      // Range slider
+      ImGui::PushItemWidth(half_width);
+      ImGui::SliderInt("##Range ID", &range_slider, 0, radar_data->n_range - 1,
+                       "");
+
+      ImGui::PopItemWidth();
+
+      // Speed Slider
+      ImGui::SameLine();
+      ImGui::PushItemWidth(half_width);
+      ImGui::SliderInt("##Speed ID", &speed_slider, -radar_data->n_speed,
+                       radar_data->n_speed, "");
+      ImGui::PopItemWidth();
+
+      // Slice Subplots
+      if (ImPlot::BeginSubplots("Ambiguity Slices", 2, 1, ImVec2(-1, -1))) {
+        // Range Slice plot
+        ImPlot::PushColormap(SPECTRUM_COLOUR_MAP);
+        if (ImPlot::BeginPlot("Range Slice", ImVec2(-1, -1),
+                              ImPlotFlags_NoLegend)) {
+
+          // Axes limits and labels
+          ImPlot::SetupAxes("Speed [m/s]", ambiguity_label.c_str());
+          ImPlot::SetupAxisLimits(ImAxis_X1, speed_vals.front(),
+                                  speed_vals.back(), ImGuiCond_Always);
+          ImPlot::SetupAxisLimits(ImAxis_Y1, cfg.process_cfg.ambiguity_lims[0],
+                                  cfg.process_cfg.ambiguity_lims[1],
+                                  ImGuiCond_Always);
+
+          // Plot
+          ImPlot::PlotLine("Range Slice", speed_vals.data(), range_slice.data(),
+                           range_slice.size());
+
+          ImPlot::EndPlot();
+        }
+
+        // Speed Slice plot
+        if (ImPlot::BeginPlot("Speed Slice", ImVec2(-1, -1),
+                              ImPlotFlags_NoLegend)) {
+
+          // Axes limits and labels
+          ImPlot::SetupAxes("Range [m]", ambiguity_label.c_str());
+          ImPlot::SetupAxisLimits(ImAxis_X1, range_vals.front(),
+                                  range_vals.back(), ImGuiCond_Always);
+          ImPlot::SetupAxisLimits(ImAxis_Y1, cfg.process_cfg.ambiguity_lims[0],
+                                  cfg.process_cfg.ambiguity_lims[1],
+                                  ImGuiCond_Always);
+
+          // plot
+          ImPlot::PlotLine("Speed Slice", range_vals.data(), speed_slice.data(),
+                           speed_slice.size());
+
+          ImPlot::EndPlot();
+        }
+
+        ImPlot::PopColormap();
+        ImPlot::EndSubplots();
+      }
+
+      ImGui::EndTabItem();
+    }
+
     // Config settings tab
     if (ImGui::BeginTabItem("Settings")) {
+
       // Config settings
       ImGuiTableFlags table_flags =
           ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
       if (ImGui::BeginTable("Receiver Settings", 2, table_flags)) {
+
         ImGui::TableSetupColumn("Receiver Setting");
         ImGui::TableSetupColumn("Value");
         ImGui::TableHeadersRow();
@@ -315,6 +468,7 @@ void RadarApp::update_window(GLFWwindow *window, bool *show_window,
         ImGui::TableNextColumn();
         ImGui::Text("%s",
                     cfg.receiver_cfg.dab_notch_enable ? "Enabled" : "Disabled");
+
         ImGui::EndTable();
       }
       if (ImGui::BeginTable("Processing Settings", 2, table_flags)) {

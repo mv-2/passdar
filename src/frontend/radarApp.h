@@ -52,6 +52,16 @@ private:
   std::thread spectrumThread_B;
   std::thread ambiguityThread;
 
+  // Slider values
+  int range_slider;
+  int speed_slider;
+
+  // Speed Slice
+  std::vector<double> range_slice;
+  std::vector<double> speed_slice;
+  std::vector<double> speed_vals;
+  std::vector<double> range_vals;
+
   // Ambiguity scale label
   std::string ambiguity_label;
 
