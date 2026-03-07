@@ -9,8 +9,6 @@ live ambiguity between the incoming signals.
 
 ![Slices](images/slices.png "Slices")
 ![Slices](images/spectra.png "Spectra")
-ic
-![Spectra](images/spectra.png "Spectra")
 
 ## Build & Run
 
