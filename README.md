@@ -5,9 +5,12 @@ minimal function passive radar using an SDRplay RspDuo with two TV antennas.
 The current implementation displays both live spectra from each receiver and
 live ambiguity between the incoming signals.
 
-![Spectra](images/spectra.png "Spectra")
-
 ![Ambiguity](images/ambiguity.png "Ambiguity")
+
+![Slices](images/slices.png "Slices")
+![Slices](images/spectra.png "Spectra")
+ic
+![Spectra](images/spectra.png "Spectra")
 
 ## Build & Run
 
@@ -16,7 +19,7 @@ To clone and build the project while cloning external repositories recursively.
 ```bash
 git clone --recurse-submodules https://github.com/mv-2/passdar.git
 cd passdar
-cmake -B build
+cmesake -B build
 cmake --build build
 ```
 
