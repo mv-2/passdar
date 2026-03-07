@@ -285,6 +285,7 @@ void RadarData::process_ambiguity(std::atomic<bool> *exit_flag) {
   }
   fftw_free(data_a_copy);
   fftw_free(data_b_copy);
+  fftw_free(twiddle_factors);
 
   fftw_cleanup();
 }

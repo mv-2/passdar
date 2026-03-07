@@ -79,19 +79,20 @@ ReceiverConfig::ReceiverConfig(nlohmann::json json_rcv) {
 }
 
 ReceiverConfig::ReceiverConfig() {
-  fc = 0;
-  fs = 0;
+  static const int SAMPLE_FREQUENCY_DEFAULT = 6000000;
+  fc = 100000000;
+  fs = SAMPLE_FREQUENCY_DEFAULT;
   agc_bandwidth_nr = 0;
   agc_set_point_nr = 0;
-  gRdB_A = 0;
-  gRdB_B = 0;
-  lna_state = 0;
-  dec_factor = 0;
-  ifType = sdrplay_api_IF_Undefined;
-  bwType = sdrplay_api_BW_Undefined;
-  loType = sdrplay_api_LO_Undefined;
-  rf_notch_enable = 0;
-  dab_notch_enable = 0;
+  gRdB_A = 40;
+  gRdB_B = 40;
+  lna_state = 1;
+  dec_factor = 1;
+  ifType = sdrplay_api_IF_Zero;
+  bwType = sdrplay_api_BW_8_000;
+  loType = sdrplay_api_LO_Auto;
+  rf_notch_enable = false;
+  dab_notch_enable = false;
 }
 
 ProcessConfig::ProcessConfig(nlohmann::json json_prcs) {
@@ -106,11 +107,11 @@ ProcessConfig::ProcessConfig(nlohmann::json json_prcs) {
 }
 
 ProcessConfig::ProcessConfig() {
-  buffer_size = 0.0;
-  max_range = 0.0;
-  max_speed = 0.0;
-  dft_window = DftWindow::Rectangular;
+  buffer_size = 262144;
+  max_range = 50000;
+  max_speed = 350;
   _win_str = "Rectangular";
+  dft_window = DftWindow::Rectangular;
 }
 
 Config::Config(std::string cfg_path) : receiver_cfg(), process_cfg() {

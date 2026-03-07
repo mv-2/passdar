@@ -17,22 +17,32 @@ const ImPlotColormap SPECTRUM_COLOUR_MAP = ImPlotColormap_Spectral;
 const ImPlotColormap AMBIGUITY_COLOUR_MAP = ImPlotColormap_Jet;
 const int COLOURBAR_WIDTH = 100;
 
-RadarApp::RadarApp(Config _cfg) {
-  // Initialise capture & processing objects
-  receiver = new Receiver(_cfg.receiver_cfg);
-  stream_a_data = new SpecData(_cfg);
-  stream_b_data = new SpecData(_cfg);
-  radar_data = new RadarData(_cfg, stream_a_data, stream_b_data);
+RadarApp::RadarApp() : cfg(Config()) {
+  // Assign object fields from default config
+  setup();
+}
 
+RadarApp::RadarApp(Config _cfg) {
   // config
   cfg = _cfg;
+
+  // Assign object fields from default config
+  setup();
+}
+
+void RadarApp::setup(void) {
+  // Initialise capture & processing objects
+  receiver = new Receiver(cfg.receiver_cfg);
+  stream_a_data = new SpecData(cfg);
+  stream_b_data = new SpecData(cfg);
+  radar_data = new RadarData(cfg, stream_a_data, stream_b_data);
 
   // Preallocate vectors
   ambiguity_copy.resize(radar_data->ambiguity_columns * radar_data->n_speed);
   range_slice.resize(radar_data->ambiguity_columns);
   speed_slice.resize(radar_data->n_range);
 
-  // Initilaise slider values
+  // Initialise slider values
   range_slider = 0;
   speed_slider = 0;
 
@@ -274,8 +284,8 @@ void RadarApp::update_window(GLFWwindow *window, bool *show_window,
         // Assign range values at speed point
         for (int i = 0; i < radar_data->n_range; i++) {
           speed_slice[i] =
-              radar_data
-                  ->ambiguity[i * radar_data->ambiguity_columns + speed_slider];
+              radar_data->ambiguity[i * radar_data->ambiguity_columns +
+                                    speed_slider + radar_data->n_speed];
         }
 
         radar_data->ambiguity_mutex.unlock();

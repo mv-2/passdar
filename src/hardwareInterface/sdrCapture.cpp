@@ -11,7 +11,7 @@
 #include "cfgInterface.h"
 #include "sdrCapture.h"
 
-// GLobal Variables
+// Global Variables
 sdrplay_api_ErrT sdrErr;
 sdrplay_api_DeviceT *chosenDevice = NULL;
 sdrplay_api_DeviceT devs[1]; // Assuming 1 device

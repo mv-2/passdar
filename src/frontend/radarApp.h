@@ -21,6 +21,11 @@ public:
   RadarApp(Config cfg);
 
   /*
+   * Default constructor for when no config file is provided
+   */
+  RadarApp();
+
+  /*
    * Receiver connection and data capture
    */
   Receiver *receiver;
@@ -46,6 +51,9 @@ public:
   void run(void);
 
 private:
+  // Object setup function
+  void setup(void);
+
   // Threads
   std::thread captureThread;
   std::thread spectrumThread_A;
@@ -65,7 +73,7 @@ private:
   // Ambiguity scale label
   std::string ambiguity_label;
 
-  // Frame upate function
+  // Frame update function
   void update(void);
 
   // Create ImGui window
