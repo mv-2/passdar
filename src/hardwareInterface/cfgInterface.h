@@ -12,6 +12,9 @@ enum class DftWindow { Rectangular, Hanning };
 // Scale enum
 enum class DisplayScale { Linear, dB };
 
+// Default sample frequency constant
+const double SAMPLE_FREQUENCY_DEFAULT = 6000000;
+
 /*
  * Class of static functions and variables for ease of config parsing
  */
@@ -74,8 +77,6 @@ struct ReceiverConfig {
   sdrplay_api_LoModeT loType;
   bool rf_notch_enable;
   bool dab_notch_enable;
-
-  static const double SAMPLE_FREQUENCY_DEFAULT;
 
   ReceiverConfig(nlohmann::json json_rcv);
   ReceiverConfig();

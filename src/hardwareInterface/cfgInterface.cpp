@@ -62,7 +62,6 @@ nlohmann::json cfgInterface::load_config(std::string cfg_path) {
 }
 
 ReceiverConfig::ReceiverConfig(nlohmann::json json_rcv) {
-  static const int SAMPLE_FREQUENCY_DEFAULT = 6000000;
   dec_factor = json_rcv["dec_factor"];
   fc = json_rcv["fc"];
   fs = SAMPLE_FREQUENCY_DEFAULT / dec_factor;
@@ -79,7 +78,6 @@ ReceiverConfig::ReceiverConfig(nlohmann::json json_rcv) {
 }
 
 ReceiverConfig::ReceiverConfig() {
-  static const int SAMPLE_FREQUENCY_DEFAULT = 6000000;
   fc = 100000000;
   fs = SAMPLE_FREQUENCY_DEFAULT;
   agc_bandwidth_nr = 0;
@@ -107,7 +105,7 @@ ProcessConfig::ProcessConfig(nlohmann::json json_prcs) {
 }
 
 ProcessConfig::ProcessConfig() {
-  buffer_size = 262144;
+  buffer_size = 262140;
   max_range = 50000;
   max_speed = 350;
   _win_str = "Rectangular";

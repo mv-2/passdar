@@ -28,7 +28,6 @@ Receiver::Receiver(ReceiverConfig receiverCfg) {
   // Assign Receiver parameters
   ready_flag.store(false);
   fc = receiverCfg.fc;
-  fs = receiverCfg.fs;
   agc_bandwidth_nr = receiverCfg.agc_bandwidth_nr;
   agc_set_point_nr = receiverCfg.agc_set_point_nr;
   gRdB_A = receiverCfg.gRdB_A;

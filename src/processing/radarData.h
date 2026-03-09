@@ -56,7 +56,8 @@ public:
   /*
    * Calculates ambiguity surface between receivers.
    */
-  void process_ambiguity(std::atomic<bool> *exit_flag);
+  void process_ambiguity(std::atomic<bool> *exit_flag,
+                         std::mutex *fftw_plan_mutex);
 
   // number of columns in ambiguity surface
   int ambiguity_columns;
@@ -71,6 +72,9 @@ private:
   fftw_complex *data_b_copy;
   std::vector<fftw_complex *> delay_lag_product;
   int delay_lag_length;
+
+  // Set up fftw plans
+  void initialise_fftw_plans(void);
 
   // Scaling for ambiguity calculation
   DisplayScale ambiguity_scale;

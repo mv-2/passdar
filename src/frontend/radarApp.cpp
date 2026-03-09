@@ -150,6 +150,9 @@ void RadarApp::run() {
   // Window open flag
   bool show_window = true;
 
+  // Mutex to ensure thread safety when generating fftw plans
+  std::mutex fftw_plan_mutex;
+
   // Run and restart until window closed
   while (show_window && !glfwWindowShouldClose(window)) {
     // reset all fields
@@ -160,12 +163,12 @@ void RadarApp::run() {
     captureThread = std::thread([&] {
       receiver->run_capture(stream_a_data, stream_b_data, &exit_flag);
     });
-    spectrumThread_A =
-        std::thread([&] { stream_a_data->process_spectrum(&exit_flag); });
-    spectrumThread_B =
-        std::thread([&] { stream_b_data->process_spectrum(&exit_flag); });
-    ambiguityThread =
-        std::thread([&] { radar_data->process_ambiguity(&exit_flag); });
+    spectrumThread_A = std::thread(
+        [&] { stream_a_data->process_spectrum(&exit_flag, &fftw_plan_mutex); });
+    spectrumThread_B = std::thread(
+        [&] { stream_b_data->process_spectrum(&exit_flag, &fftw_plan_mutex); });
+    ambiguityThread = std::thread(
+        [&] { radar_data->process_ambiguity(&exit_flag, &fftw_plan_mutex); });
 
     // Run and update frames
     while (show_window && !glfwWindowShouldClose(window) && !restart.load()) {
@@ -400,6 +403,11 @@ void RadarApp::settings_frame_update(void) {
     ImGui::TableNextColumn();
     ImGui::InputInt("Sample Buffer Length", &cfg.process_cfg.buffer_size, 1,
                     1000);
+    if (ImGui::IsItemDeactivatedAfterEdit()) {
+      cfg.process_cfg.buffer_size =
+          cfg.process_cfg.buffer_size -
+          (cfg.process_cfg.buffer_size % radar_data->n_speed);
+    }
 
     // Row 2
     // Sample frequency
@@ -500,6 +508,8 @@ void RadarApp::settings_frame_update(void) {
     if (ImGui::IsItemDeactivatedAfterEdit()) {
       cfg.receiver_cfg.dec_factor =
           std::clamp(cfg.receiver_cfg.dec_factor, 1, 20);
+      cfg.receiver_cfg.fs =
+          SAMPLE_FREQUENCY_DEFAULT / cfg.receiver_cfg.dec_factor;
     }
 
     // Row 9
@@ -508,7 +518,7 @@ void RadarApp::settings_frame_update(void) {
     ImGui::TableNextColumn();
     ImGui::SliderInt("##IF BW Slider", &IF_id, 0, if_vals.size() - 1, "");
     ImGui::SameLine();
-    ImGui::Text("AGC Bandwidth: %.3f kHz",
+    ImGui::Text("IF Bandwidth: %.3f kHz",
                 static_cast<double>(if_vals[IF_id]) / 1000);
     if (ImGui::IsItemDeactivatedAfterEdit()) {
       cfg.receiver_cfg.ifType = cfgInterface::ifType_map.at(if_vals[IF_id]);

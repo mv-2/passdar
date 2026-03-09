@@ -25,22 +25,6 @@ SpecData::SpecData(Config cfg) {
   spectrum_internal = fftw_alloc_complex(buffer_size);
   sample_buffer = fftw_alloc_complex(buffer_size);
 
-  // Load wisdom file if available
-  if (fftw_import_wisdom_from_filename(SPECTRUM_WISDOM_FILENAME.c_str()) == 0) {
-    std::cout << "Failed to load " << SPECTRUM_WISDOM_FILENAME << " file"
-              << std::endl;
-  }
-
-  // Create FFTW plan
-  fft_plan = fftw_plan_dft_1d(buffer_size, sample_buffer, spectrum_internal,
-                              FFTW_FORWARD, FFTW_PATIENT);
-
-  // Export wisdom
-  if (fftw_export_wisdom_to_filename(SPECTRUM_WISDOM_FILENAME.c_str()) == 0) {
-    std::cout << "Failed to export " << SPECTRUM_WISDOM_FILENAME << " file"
-              << std::endl;
-  }
-
   // Set frequency vector values
   double sample_frequency = static_cast<double>(cfg.receiver_cfg.fs) / 1e6;
   for (int i = -static_cast<int>(buffer_size) / 2;
@@ -66,6 +50,25 @@ SpecData::SpecData(Config cfg) {
   default: {
     std::cerr << "Error assigning window" << std::endl;
   }
+  }
+}
+
+void SpecData::initialise_fftw_plan(void) {
+
+  // Load wisdom file if available
+  if (fftw_import_wisdom_from_filename(SPECTRUM_WISDOM_FILENAME.c_str()) == 0) {
+    std::cout << "Failed to load " << SPECTRUM_WISDOM_FILENAME << " file"
+              << std::endl;
+  }
+
+  // Create FFTW plan
+  fft_plan = fftw_plan_dft_1d(buffer_size, sample_buffer, spectrum_internal,
+                              FFTW_FORWARD, FFTW_PATIENT);
+
+  // Export wisdom
+  if (fftw_export_wisdom_to_filename(SPECTRUM_WISDOM_FILENAME.c_str()) == 0) {
+    std::cout << "Failed to export " << SPECTRUM_WISDOM_FILENAME << " file"
+              << std::endl;
   }
 }
 
@@ -105,7 +108,12 @@ void SpecData::calc_dft() {
   fftw_execute(fft_plan);
 }
 
-void SpecData::process_spectrum(std::atomic<bool> *exit_flag) {
+void SpecData::process_spectrum(std::atomic<bool> *exit_flag,
+                                std::mutex *fftw_plan_mutex) {
+  // Initialise fftw plan
+  fftw_plan_mutex->lock();
+  initialise_fftw_plan();
+  fftw_plan_mutex->unlock();
 
   while (!exit_flag->load()) {
     // Lock mutex for SpecData so plotting thread does not read spectrum during

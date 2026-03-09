@@ -103,5 +103,8 @@ private:
 
   // Ambiguity copy for keeping window updated
   std::vector<double> ambiguity_copy;
+
+  // FFTW planning mutex
+  std::mutex fftw_plan_mutex;
 };
 #endif

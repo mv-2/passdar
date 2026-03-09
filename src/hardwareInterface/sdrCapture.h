@@ -46,7 +46,6 @@ public:
 
   // Required params
   uint32_t fc;
-  uint32_t fs;
   int agc_bandwidth_nr;
   int agc_set_point_nr;
   int _gain_reduction_nr_a;

@@ -69,6 +69,25 @@ RadarData::RadarData(Config cfg, SpecData *_stream_a_data,
     fftw_amb_out[i] = fftw_alloc_complex(sample_buffer_size);
   }
 
+  // Compute twiddles
+  twiddle_factors =
+      fftw_alloc_complex((n_speed - 1) * (sample_buffer_size / n_speed - 1));
+  for (int j = 1; j < sample_buffer_size / n_speed; j++) {
+    for (int i = 1; i < n_speed; i++) {
+      twiddle_factors[(j - 1) * (n_speed - 1) + (i - 1)][0] =
+          cos(static_cast<double>(i * j) * FFTW_FORWARD * 2 * M_PI /
+              static_cast<double>(sample_buffer_size));
+      twiddle_factors[(j - 1) * (n_speed - 1) + (i - 1)][1] =
+          sin(static_cast<double>(i * j) * FFTW_FORWARD * 2 * M_PI /
+              static_cast<double>(sample_buffer_size));
+    }
+  }
+
+  // Set display scale for calculation
+  ambiguity_scale = cfg.process_cfg.ambiguity_scale;
+}
+
+void RadarData::initialise_fftw_plans(void) {
   // Load wisdom file if available
   if (fftw_import_wisdom_from_filename(AMBIGUITY_WISDOM_FILE.c_str()) == 0) {
     std::cout << "Failed to load " << AMBIGUITY_WISDOM_FILE << " file"
@@ -90,23 +109,6 @@ RadarData::RadarData(Config cfg, SpecData *_stream_a_data,
     std::cout << "Failed to export " << AMBIGUITY_WISDOM_FILE << " file"
               << std::endl;
   }
-
-  // Compute twiddles
-  twiddle_factors =
-      fftw_alloc_complex((n_speed - 1) * (sample_buffer_size / n_speed - 1));
-  for (int j = 1; j < sample_buffer_size / n_speed; j++) {
-    for (int i = 1; i < n_speed; i++) {
-      twiddle_factors[(j - 1) * (n_speed - 1) + (i - 1)][0] =
-          cos(static_cast<double>(i * j) * FFTW_FORWARD * 2 * M_PI /
-              static_cast<double>(sample_buffer_size));
-      twiddle_factors[(j - 1) * (n_speed - 1) + (i - 1)][1] =
-          sin(static_cast<double>(i * j) * FFTW_FORWARD * 2 * M_PI /
-              static_cast<double>(sample_buffer_size));
-    }
-  }
-
-  // Set display scale for calculation
-  ambiguity_scale = cfg.process_cfg.ambiguity_scale;
 }
 
 void RadarData::ambiguity_thread_calc(int row) {
@@ -226,7 +228,13 @@ void RadarData::ambiguity_thread_calc(int row) {
   return;
 }
 
-void RadarData::process_ambiguity(std::atomic<bool> *exit_flag) {
+void RadarData::process_ambiguity(std::atomic<bool> *exit_flag,
+                                  std::mutex *fftw_plan_mutex) {
+  // Initialise fftw plans
+  fftw_plan_mutex->lock();
+  initialise_fftw_plans();
+  fftw_plan_mutex->unlock();
+
   // Initialise processing threads
   std::deque<std::thread> amb_threads;
 

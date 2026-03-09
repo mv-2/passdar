@@ -41,7 +41,8 @@ public:
    * @param exit_flag Pointer to atomic<bool> flag denoting user request to end
    * program.
    */
-  void process_spectrum(std::atomic<bool> *exit_flag);
+  void process_spectrum(std::atomic<bool> *exit_flag,
+                        std::mutex *fftw_plan_mutex);
 
   /*
    * Updates sample buffer with most recent samples from USB packet
@@ -64,6 +65,9 @@ private:
 
   // Samples copied and casted from data_iq field buffers
   fftw_complex *sample_buffer;
+
+  // set up FFTW plan
+  void initialise_fftw_plan(void);
 
   /*
    * Calcualtes complex DFT of current sample set in data_iq. Result stored in
