@@ -170,6 +170,29 @@ void RadarApp::run() {
     range_step = radar_data->range_step;
     max_allowable_range = cfg.process_cfg.buffer_size * range_step / 2;
 
+    // Assign ids for sliders
+    std::string lo_str = cfgInterface::loStr_map.at(cfg.receiver_cfg.loType);
+    for (unsigned int i = 0; i < LO_vals.size(); i++) {
+      if (strcmp(LO_vals[i].c_str(), lo_str.c_str()) == 0) {
+        LO_id = i;
+        break;
+      }
+    }
+    int bw_num = cfgInterface::bwNum_map.at(cfg.receiver_cfg.bwType);
+    for (unsigned int i = 0; i < bw_vals.size(); i++) {
+      if (bw_vals[i] == bw_num) {
+        bw_id = i;
+        break;
+      }
+    }
+    int if_num = cfgInterface::ifNum_map.at(cfg.receiver_cfg.ifType);
+    for (unsigned int i = 0; i < if_vals.size(); i++) {
+      if (if_vals[i] == if_num) {
+        IF_id = i;
+        break;
+      }
+    }
+
     // Run and update frames
     while (show_window && !glfwWindowShouldClose(window) && !restart.load()) {
       update_window(window, &show_window);
@@ -448,11 +471,11 @@ void RadarApp::settings_frame_update(void) {
     ImGui::TableNextColumn();
     ImGui::SliderInt("##AGC BW Slider", &agc_bw_id, 0, agc_bw_vals.size() - 1,
                      "");
-    ImGui::SameLine();
-    ImGui::Text("AGC Bandwidth: %d Hz", agc_bw_vals[agc_bw_id]);
     if (ImGui::IsItemDeactivatedAfterEdit()) {
       cfg.receiver_cfg.agc_bandwidth_nr = agc_bw_vals[agc_bw_id];
     }
+    ImGui::SameLine();
+    ImGui::Text("AGC Bandwidth: %d Hz", agc_bw_vals[agc_bw_id]);
 
     // Max range
     ImGui::TableNextColumn();
@@ -508,6 +531,21 @@ void RadarApp::settings_frame_update(void) {
     ImGui::SameLine();
     ImGui::Text("LNA State: %d", cfg.receiver_cfg.lna_state);
 
+    // Ambiguity scale
+    ImGui::TableNextColumn();
+    if (ImGui::Button(cfg.process_cfg.ambiguity_scale == DisplayScale::Linear
+                          ? "Linear Ambiguity Scale"
+                          : "dB Ambiguity Scale")) {
+      switch (cfg.process_cfg.ambiguity_scale) {
+      case DisplayScale::Linear:
+        cfg.process_cfg.ambiguity_scale = DisplayScale::dB;
+        break;
+      case DisplayScale::dB:
+        cfg.process_cfg.ambiguity_scale = DisplayScale::Linear;
+        break;
+      }
+    }
+
     // Row 8
     // Decimation Factor
     ImGui::TableNextRow();
@@ -522,40 +560,52 @@ void RadarApp::settings_frame_update(void) {
       update_range_vars();
     }
 
+    // Ambiguity scale limits
+    ImGui::TableNextColumn();
+    double widths = ImGui::GetContentRegionAvail().x / 4 -
+                    ImGui::CalcTextSize("Ambiguity Minimum").x;
+    ImGui::SetNextItemWidth(widths);
+    ImGui::InputDouble("Ambiguity Minimum", &cfg.process_cfg.ambiguity_lims[0],
+                       1, 100, "%.1f");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(widths);
+    ImGui::InputDouble("Ambiguity Maximum", &cfg.process_cfg.ambiguity_lims[1],
+                       1, 100, "%.1f");
+
     // Row 9
     // IF type
     ImGui::TableNextRow();
     ImGui::TableNextColumn();
     ImGui::SliderInt("##IF BW Slider", &IF_id, 0, if_vals.size() - 1, "");
-    ImGui::SameLine();
-    ImGui::Text("IF Bandwidth: %.3f kHz",
-                static_cast<double>(if_vals[IF_id]) / 1000);
     if (ImGui::IsItemDeactivatedAfterEdit()) {
       cfg.receiver_cfg.ifType = cfgInterface::ifType_map.at(if_vals[IF_id]);
     }
+    ImGui::SameLine();
+    ImGui::Text("IF Bandwidth: %.3f kHz",
+                static_cast<double>(if_vals[IF_id]) / 1000);
 
     // Row 10
     // BW type
     ImGui::TableNextRow();
     ImGui::TableNextColumn();
     ImGui::SliderInt("##BW Slider", &bw_id, 0, bw_vals.size() - 1, "");
-    ImGui::SameLine();
-    ImGui::Text("Receiver Bandwidth: %.3f kHz",
-                static_cast<double>(bw_vals[bw_id]));
     if (ImGui::IsItemDeactivatedAfterEdit()) {
       cfg.receiver_cfg.bwType = cfgInterface::bwType_map.at(bw_vals[bw_id]);
     }
+    ImGui::SameLine();
+    ImGui::Text("Receiver Bandwidth: %.3f kHz",
+                static_cast<double>(bw_vals[bw_id]));
 
     // Row 11
     // LO type
     ImGui::TableNextRow();
     ImGui::TableNextColumn();
     ImGui::SliderInt("##LO Slider", &LO_id, 0, LO_vals.size() - 1, "");
-    ImGui::SameLine();
-    ImGui::Text("LO Bandwidth: %s", LO_disp_vals[LO_id].c_str());
     if (ImGui::IsItemDeactivatedAfterEdit()) {
       cfg.receiver_cfg.loType = cfgInterface::loType_map.at(LO_vals[LO_id]);
     }
+    ImGui::SameLine();
+    ImGui::Text("LO Bandwidth: %s", LO_disp_vals[LO_id].c_str());
 
     // Row 12
     // RF Notch
