@@ -10,9 +10,6 @@
 #include "../hardwareInterface/cfgInterface.h"
 #include "radarData.h"
 
-// Wave propagation velocity (I know we aren't in a vacuum)
-const double PHASE_VELOCITY = 3e8;
-
 // constant file location to store FFTW wisdom files
 const std::string AMBIGUITY_WISDOM_FILE = "cfg/ambiguity.wisdom";
 
@@ -31,7 +28,6 @@ RadarData::RadarData(Config cfg, SpecData *_stream_a_data,
 
   // Calculate range step
   range_step = PHASE_VELOCITY / sample_frequency;
-  max_allowable_range = sample_buffer_size * range_step / 2;
 
   // range points
   speed_step = (stream_a_data->frequency[1] - stream_a_data->frequency[0]) *
@@ -85,6 +81,15 @@ RadarData::RadarData(Config cfg, SpecData *_stream_a_data,
 
   // Set display scale for calculation
   ambiguity_scale = cfg.process_cfg.ambiguity_scale;
+
+  // Calculate range & speed values
+  // Calculate range values
+  for (int i = 0; i < n_range; i++) {
+    range_vals.push_back(static_cast<double>(i) * range_step);
+  }
+  for (int i = -n_speed; i < n_speed; i++) {
+    speed_vals.push_back(static_cast<double>(i) * speed_step);
+  }
 }
 
 void RadarData::initialise_fftw_plans(void) {

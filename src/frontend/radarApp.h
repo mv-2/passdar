@@ -56,6 +56,17 @@ private:
   // Object setup function
   void setup(void);
 
+  // Speed data variables
+  int n_speed;
+  double speed_step;
+  void update_speed_vars(void);
+
+  // Range data variables
+  int n_range;
+  double range_step;
+  double max_allowable_range;
+  void update_range_vars(void);
+
   // Threads
   std::thread captureThread;
   std::thread spectrumThread_A;
@@ -79,8 +90,6 @@ private:
   // Speed Slice
   std::vector<double> range_slice;
   std::vector<double> speed_slice;
-  std::vector<double> speed_vals;
-  std::vector<double> range_vals;
 
   // Ambiguity scale label
   std::string ambiguity_label;

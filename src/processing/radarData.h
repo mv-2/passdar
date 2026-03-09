@@ -10,6 +10,10 @@
 #include "../hardwareInterface/cfgInterface.h"
 #include "spectrumData.h"
 
+// Wave propagation velocity (I know we aren't in a vacuum)
+// TODO: Make consts class?
+const double PHASE_VELOCITY = 3e8;
+
 /*
  * Stores data of both streams required for RADAR processing
  */
@@ -33,8 +37,9 @@ public:
   // maximum measurable speed
   double max_speed;
 
-  // Maximum allowable range measurement
-  double max_allowable_range;
+  // Range & speed values
+  std::vector<double> range_vals;
+  std::vector<double> speed_vals;
 
   // Speed step in m/s
   double speed_step;

@@ -8,6 +8,7 @@
 #include "../../external/imgui/backends/imgui_impl_opengl3.h"
 #include "../hardwareInterface/cfgInterface.h"
 #include "../hardwareInterface/sdrCapture.h"
+#include "../processing/radarData.h"
 #include "imgui.h"
 #include "implot.h"
 #include "radarApp.h"
@@ -39,16 +40,6 @@ void RadarApp::setup(void) {
   // Initialise slider values
   range_slider = 0;
   speed_slider = 0;
-
-  // Calculate range values
-  for (int i = 0; i < radar_data->n_range; i++) {
-    range_vals.push_back(static_cast<double>(i) * radar_data->range_step);
-  }
-
-  // Calculate speed values
-  for (int i = -radar_data->n_speed; i < radar_data->n_speed; i++) {
-    speed_vals.push_back(static_cast<double>(i) * radar_data->speed_step);
-  }
 
   // Set ambiguity scales label
   switch (cfg.process_cfg.ambiguity_scale) {
@@ -169,6 +160,15 @@ void RadarApp::run() {
         [&] { stream_b_data->process_spectrum(&exit_flag, &fftw_plan_mutex); });
     ambiguityThread = std::thread(
         [&] { radar_data->process_ambiguity(&exit_flag, &fftw_plan_mutex); });
+
+    // Update to rounded settings
+    // NOTE: This isn't thread safe which is fine in this case unless computer
+    // too fast
+    cfg.process_cfg.max_range = radar_data->range_vals.back();
+    speed_step = radar_data->speed_step;
+    n_speed = radar_data->n_speed;
+    range_step = radar_data->range_step;
+    max_allowable_range = cfg.process_cfg.buffer_size * range_step / 2;
 
     // Run and update frames
     while (show_window && !glfwWindowShouldClose(window) && !restart.load()) {
@@ -345,15 +345,15 @@ void RadarApp::ambiguity_slice_frame_update(void) {
 
       // Axes limits and labels
       ImPlot::SetupAxes("Speed [m/s]", ambiguity_label.c_str());
-      ImPlot::SetupAxisLimits(ImAxis_X1, speed_vals.front(), speed_vals.back(),
-                              ImGuiCond_Always);
+      ImPlot::SetupAxisLimits(ImAxis_X1, radar_data->speed_vals.front(),
+                              radar_data->speed_vals.back(), ImGuiCond_Always);
       ImPlot::SetupAxisLimits(ImAxis_Y1, cfg.process_cfg.ambiguity_lims[0],
                               cfg.process_cfg.ambiguity_lims[1],
                               ImGuiCond_Once);
 
       // Plot
-      ImPlot::PlotLine("Range Slice", speed_vals.data(), range_slice.data(),
-                       range_slice.size());
+      ImPlot::PlotLine("Range Slice", radar_data->speed_vals.data(),
+                       range_slice.data(), range_slice.size());
 
       ImPlot::EndPlot();
     }
@@ -364,15 +364,15 @@ void RadarApp::ambiguity_slice_frame_update(void) {
 
       // Axes limits and labels
       ImPlot::SetupAxes("Range [m]", ambiguity_label.c_str());
-      ImPlot::SetupAxisLimits(ImAxis_X1, range_vals.front(), range_vals.back(),
-                              ImGuiCond_Always);
+      ImPlot::SetupAxisLimits(ImAxis_X1, radar_data->range_vals.front(),
+                              radar_data->range_vals.back(), ImGuiCond_Always);
       ImPlot::SetupAxisLimits(ImAxis_Y1, cfg.process_cfg.ambiguity_lims[0],
                               cfg.process_cfg.ambiguity_lims[1],
                               ImGuiCond_Once);
 
       // plot
-      ImPlot::PlotLine("Speed Slice", range_vals.data(), speed_slice.data(),
-                       speed_slice.size());
+      ImPlot::PlotLine("Speed Slice", radar_data->range_vals.data(),
+                       speed_slice.data(), speed_slice.size());
 
       ImPlot::EndPlot();
     }
@@ -396,8 +396,11 @@ void RadarApp::settings_frame_update(void) {
     // centre frequency
     ImGui::TableNextRow();
     ImGui::TableNextColumn();
-    ImGui::InputInt("Centre Frequency [Hz]", &cfg.receiver_cfg.fc, 100000,
-                    100000);
+    if (ImGui::InputInt("Centre Frequency [Hz]", &cfg.receiver_cfg.fc, 100000,
+                        100000)) {
+      update_speed_vars();
+      update_range_vars();
+    }
 
     // Buffer size
     ImGui::TableNextColumn();
@@ -407,14 +410,18 @@ void RadarApp::settings_frame_update(void) {
       cfg.process_cfg.buffer_size =
           cfg.process_cfg.buffer_size -
           (cfg.process_cfg.buffer_size % radar_data->n_speed);
+      update_speed_vars();
     }
 
     // Row 2
     // Sample frequency
     ImGui::TableNextRow();
     ImGui::TableNextColumn();
-    ImGui::InputInt("Sample Frequency [Hz]", &cfg.receiver_cfg.fs, 1, 1,
-                    ImGuiInputTextFlags_ReadOnly);
+    if (ImGui::InputInt("Sample Frequency [Hz]", &cfg.receiver_cfg.fs, 1, 1,
+                        ImGuiInputTextFlags_ReadOnly)) {
+      update_speed_vars();
+      update_range_vars();
+    }
 
     // DFT Window
     ImGui::TableNextColumn();
@@ -452,8 +459,7 @@ void RadarApp::settings_frame_update(void) {
     ImGui::InputDouble("Maximum range [m]", &cfg.process_cfg.max_range, 500.0,
                        1000.0);
     if (ImGui::IsItemDeactivatedAfterEdit()) {
-      cfg.process_cfg.max_range = std::clamp(cfg.process_cfg.max_range, 1000.0,
-                                             radar_data->max_allowable_range);
+      update_range_vars();
     }
 
     // Row 4
@@ -465,7 +471,7 @@ void RadarApp::settings_frame_update(void) {
 
     // Range step
     ImGui::TableNextColumn();
-    ImGui::InputDouble("Range Step [m]", &radar_data->range_step, 1, 1, "%.1f",
+    ImGui::InputDouble("Range Step [m]", &range_step, 1, 1, "%.1f",
                        ImGuiInputTextFlags_ReadOnly);
 
     // Row 5
@@ -477,8 +483,10 @@ void RadarApp::settings_frame_update(void) {
 
     // Max speed
     ImGui::TableNextColumn();
-    ImGui::InputDouble("Maximum Speed [m/s]", &cfg.process_cfg.max_speed, 1.0,
-                       10.0);
+    if (ImGui::InputDouble("Maximum Speed [m/s]", &cfg.process_cfg.max_speed,
+                           1.0, 10.0)) {
+      update_speed_vars();
+    }
 
     // Row 6
     // Gain reduction receiver B
@@ -489,8 +497,8 @@ void RadarApp::settings_frame_update(void) {
 
     // Speed Step
     ImGui::TableNextColumn();
-    ImGui::InputDouble("Speed Step [m/s]", &radar_data->speed_step, 1, 1,
-                       "%.2f", ImGuiInputTextFlags_ReadOnly);
+    ImGui::InputDouble("Speed Step [m/s]", &speed_step, 1, 1, "%.2f",
+                       ImGuiInputTextFlags_ReadOnly);
 
     // Row 7
     // LNA State
@@ -510,6 +518,8 @@ void RadarApp::settings_frame_update(void) {
           std::clamp(cfg.receiver_cfg.dec_factor, 1, 20);
       cfg.receiver_cfg.fs =
           SAMPLE_FREQUENCY_DEFAULT / cfg.receiver_cfg.dec_factor;
+      update_speed_vars();
+      update_range_vars();
     }
 
     // Row 9
@@ -635,4 +645,19 @@ void RadarApp::update_window(GLFWwindow *window, bool *show_window) {
   glClear(GL_COLOR_BUFFER_BIT);
   ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
   glfwSwapBuffers(window);
+}
+
+void RadarApp::update_speed_vars(void) {
+  double df =
+      static_cast<double>(cfg.receiver_cfg.fs) / cfg.process_cfg.buffer_size;
+  speed_step = df * PHASE_VELOCITY / (2 * cfg.receiver_cfg.fc);
+  n_speed = cfg.process_cfg.max_speed / speed_step;
+  cfg.process_cfg.max_speed = n_speed * speed_step;
+}
+
+void RadarApp::update_range_vars(void) {
+  range_step = PHASE_VELOCITY / cfg.receiver_cfg.fs;
+  cfg.process_cfg.max_range =
+      range_step * static_cast<int>(cfg.process_cfg.max_range / range_step) + 1;
+  max_allowable_range = cfg.process_cfg.buffer_size * range_step / 2;
 }
