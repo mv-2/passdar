@@ -214,6 +214,7 @@ void RadarApp::receiver_spectra_frame_update(void) {
 
       ImPlot::EndPlot();
     }
+
     // Receiver B plot
     if (ImPlot::BeginPlot("Receiver B", ImVec2(-1, 0), ImPlotFlags_NoLegend)) {
 
@@ -382,154 +383,179 @@ void RadarApp::settings_frame_update(void) {
 
   // Config settings
   ImGuiTableFlags table_flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
-  if (ImGui::BeginTable("Receiver Settings", 2, table_flags)) {
+  if (ImGui::BeginTable("Settings", 2, table_flags)) {
 
-    ImGui::TableSetupColumn("Receiver Setting");
-    ImGui::TableSetupColumn("Value");
+    ImGui::TableSetupColumn("Receiver");
+    ImGui::TableSetupColumn("Processing");
     ImGui::TableHeadersRow();
 
+    // Row 1
     // centre frequency
     ImGui::TableNextRow();
     ImGui::TableNextColumn();
-    ImGui::Text("Centre Frequency");
-    ImGui::TableNextColumn();
-    ImGui::Text("%d MHz", cfg.receiver_cfg.fc / 1000000);
+    ImGui::InputInt("Centre Frequency [Hz]", &cfg.receiver_cfg.fc, 100000,
+                    100000);
 
+    // Buffer size
+    ImGui::TableNextColumn();
+    ImGui::InputInt("Sample Buffer Length", &cfg.process_cfg.buffer_size, 1,
+                    1000);
+
+    // Row 2
     // Sample frequency
     ImGui::TableNextRow();
     ImGui::TableNextColumn();
-    ImGui::Text("Sample Frequency");
-    ImGui::TableNextColumn();
-    ImGui::Text("%d kHz", cfg.receiver_cfg.fs / 1000);
+    ImGui::InputInt("Sample Frequency [Hz]", &cfg.receiver_cfg.fs, 1, 1,
+                    ImGuiInputTextFlags_ReadOnly);
 
+    // DFT Window
+    ImGui::TableNextColumn();
+    ImGui::Text("DFT window");
+    ImGui::SameLine();
+    if (ImGui::Button(cfg.process_cfg.dft_window == DftWindow::Hanning
+                          ? "Hanning"
+                          : "Rectangular")) {
+      switch (cfg.process_cfg.dft_window) {
+      case DftWindow::Hanning: {
+        cfg.process_cfg.dft_window = DftWindow::Rectangular;
+        break;
+      }
+      case DftWindow::Rectangular: {
+        cfg.process_cfg.dft_window = DftWindow::Hanning;
+        break;
+      }
+      }
+    }
+
+    // Row 3
     // agc_bandwidth_nr
     ImGui::TableNextRow();
     ImGui::TableNextColumn();
-    ImGui::Text("AGC Bandwidth");
-    ImGui::TableNextColumn();
-    ImGui::Text("%d", cfg.receiver_cfg.agc_bandwidth_nr);
+    ImGui::SliderInt("##AGC BW Slider", &agc_bw_id, 0, agc_bw_vals.size() - 1,
+                     "");
+    ImGui::SameLine();
+    ImGui::Text("AGC Bandwidth: %d Hz", agc_bw_vals[agc_bw_id]);
+    if (ImGui::IsItemDeactivatedAfterEdit()) {
+      cfg.receiver_cfg.agc_bandwidth_nr = agc_bw_vals[agc_bw_id];
+    }
 
+    // Max range
+    ImGui::TableNextColumn();
+    ImGui::InputDouble("Maximum range [m]", &cfg.process_cfg.max_range, 500.0,
+                       1000.0);
+    if (ImGui::IsItemDeactivatedAfterEdit()) {
+      cfg.process_cfg.max_range = std::clamp(cfg.process_cfg.max_range, 1000.0,
+                                             radar_data->max_allowable_range);
+    }
+
+    // Row 4
     // agc_set_point_nr
     ImGui::TableNextRow();
     ImGui::TableNextColumn();
-    ImGui::Text("AGC Set Point");
-    ImGui::TableNextColumn();
-    ImGui::Text("%d", cfg.receiver_cfg.agc_set_point_nr);
+    ImGui::InputInt("AGC Set Point [dB]", &cfg.receiver_cfg.agc_set_point_nr, 1,
+                    1);
 
+    // Range step
+    ImGui::TableNextColumn();
+    ImGui::InputDouble("Range Step [m]", &radar_data->range_step, 1, 1, "%.1f",
+                       ImGuiInputTextFlags_ReadOnly);
+
+    // Row 5
     // Gain reduction receiver A
     ImGui::TableNextRow();
     ImGui::TableNextColumn();
-    ImGui::Text("Gain Reduction Receiver A");
-    ImGui::TableNextColumn();
-    ImGui::Text("%d dB", cfg.receiver_cfg.gRdB_A);
+    ImGui::InputInt("Receiver A gain reduction [dB]", &cfg.receiver_cfg.gRdB_A,
+                    1, 1);
 
+    // Max speed
+    ImGui::TableNextColumn();
+    ImGui::InputDouble("Maximum Speed [m/s]", &cfg.process_cfg.max_speed, 1.0,
+                       10.0);
+
+    // Row 6
     // Gain reduction receiver B
     ImGui::TableNextRow();
     ImGui::TableNextColumn();
-    ImGui::Text("Gain Reduction Receiver B");
-    ImGui::TableNextColumn();
-    ImGui::Text("%d dB", cfg.receiver_cfg.gRdB_B);
+    ImGui::InputInt("Receiver B gain reduction [dB]", &cfg.receiver_cfg.gRdB_B,
+                    1, 1);
 
+    // Speed Step
+    ImGui::TableNextColumn();
+    ImGui::InputDouble("Speed Step [m/s]", &radar_data->speed_step, 1, 1,
+                       "%.2f", ImGuiInputTextFlags_ReadOnly);
+
+    // Row 7
     // LNA State
     ImGui::TableNextRow();
     ImGui::TableNextColumn();
-    ImGui::Text("LNA State");
-    ImGui::TableNextColumn();
-    ImGui::Text("%d", cfg.receiver_cfg.lna_state);
+    ImGui::SliderInt("## LNA State", &cfg.receiver_cfg.lna_state, 0, 9, "%d");
+    ImGui::SameLine();
+    ImGui::Text("LNA State: %d", cfg.receiver_cfg.lna_state);
 
+    // Row 8
     // Decimation Factor
     ImGui::TableNextRow();
     ImGui::TableNextColumn();
-    ImGui::Text("Decimation Factor");
-    ImGui::TableNextColumn();
-    ImGui::Text("%d", cfg.receiver_cfg.dec_factor);
+    ImGui::InputInt("Decimation Factor", &cfg.receiver_cfg.dec_factor, 1, 1);
+    if (ImGui::IsItemDeactivatedAfterEdit()) {
+      cfg.receiver_cfg.dec_factor =
+          std::clamp(cfg.receiver_cfg.dec_factor, 1, 20);
+    }
 
+    // Row 9
     // IF type
     ImGui::TableNextRow();
     ImGui::TableNextColumn();
-    ImGui::Text("IF");
-    ImGui::TableNextColumn();
-    ImGui::Text("%d kHz", cfgInterface::ifNum_map.at(cfg.receiver_cfg.ifType));
+    ImGui::SliderInt("##IF BW Slider", &IF_id, 0, if_vals.size() - 1, "");
+    ImGui::SameLine();
+    ImGui::Text("AGC Bandwidth: %.3f kHz",
+                static_cast<double>(if_vals[IF_id]) / 1000);
+    if (ImGui::IsItemDeactivatedAfterEdit()) {
+      cfg.receiver_cfg.ifType = cfgInterface::ifType_map.at(if_vals[IF_id]);
+    }
 
+    // Row 10
     // BW type
     ImGui::TableNextRow();
     ImGui::TableNextColumn();
-    ImGui::Text("Bandwidth");
-    ImGui::TableNextColumn();
-    ImGui::Text("%d MHz", cfgInterface::bwNum_map.at(cfg.receiver_cfg.bwType));
+    ImGui::SliderInt("##BW Slider", &bw_id, 0, bw_vals.size() - 1, "");
+    ImGui::SameLine();
+    ImGui::Text("Receiver Bandwidth: %.3f kHz",
+                static_cast<double>(bw_vals[bw_id]));
+    if (ImGui::IsItemDeactivatedAfterEdit()) {
+      cfg.receiver_cfg.bwType = cfgInterface::bwType_map.at(bw_vals[bw_id]);
+    }
 
+    // Row 11
     // LO type
     ImGui::TableNextRow();
     ImGui::TableNextColumn();
-    ImGui::Text("LO");
-    ImGui::TableNextColumn();
-    ImGui::Text("%s MHz",
-                cfgInterface::loStr_map.at(cfg.receiver_cfg.loType).c_str());
+    ImGui::SliderInt("##LO Slider", &LO_id, 0, LO_vals.size() - 1, "");
+    ImGui::SameLine();
+    ImGui::Text("LO Bandwidth: %s", LO_disp_vals[LO_id].c_str());
+    if (ImGui::IsItemDeactivatedAfterEdit()) {
+      cfg.receiver_cfg.loType = cfgInterface::loType_map.at(LO_vals[LO_id]);
+    }
 
+    // Row 12
     // RF Notch
     ImGui::TableNextRow();
     ImGui::TableNextColumn();
-    ImGui::Text("RF Notch Filter");
-    ImGui::TableNextColumn();
-    ImGui::Text("%s",
-                cfg.receiver_cfg.rf_notch_enable ? "Enabled" : "Disabled");
+    if (ImGui::Button(cfg.receiver_cfg.rf_notch_enable ? "RF Notch Enabled"
+                                                       : "RF Notch Disabled")) {
+      cfg.receiver_cfg.rf_notch_enable = !cfg.receiver_cfg.rf_notch_enable;
+    }
 
+    // Row 13
     // DAB Notch
     ImGui::TableNextRow();
     ImGui::TableNextColumn();
-    ImGui::Text("DAB Notch Filter");
-    ImGui::TableNextColumn();
-    ImGui::Text("%s",
-                cfg.receiver_cfg.dab_notch_enable ? "Enabled" : "Disabled");
+    if (ImGui::Button(cfg.receiver_cfg.dab_notch_enable
+                          ? "DAB Notch Enabled"
+                          : "DAB Notch Disabled")) {
+      cfg.receiver_cfg.dab_notch_enable = !cfg.receiver_cfg.dab_notch_enable;
+    }
 
-    ImGui::EndTable();
-  }
-  if (ImGui::BeginTable("Processing Settings", 2, table_flags)) {
-    ImGui::TableSetupColumn("Processing Setting");
-    ImGui::TableSetupColumn("Value");
-    ImGui::TableHeadersRow();
-
-    // Buffer size
-    ImGui::TableNextRow();
-    ImGui::TableNextColumn();
-    ImGui::Text("Sample Buffer Size");
-    ImGui::TableNextColumn();
-    ImGui::Text("%d", cfg.process_cfg.buffer_size);
-
-    // Window
-    ImGui::TableNextRow();
-    ImGui::TableNextColumn();
-    ImGui::Text("Window");
-    ImGui::TableNextColumn();
-    ImGui::Text("%s", cfg.process_cfg._win_str.c_str());
-
-    // Max range
-    ImGui::TableNextRow();
-    ImGui::TableNextColumn();
-    ImGui::Text("Max Range");
-    ImGui::TableNextColumn();
-    ImGui::Text("%.1lf m", cfg.process_cfg.max_range);
-
-    // Range step
-    ImGui::TableNextRow();
-    ImGui::TableNextColumn();
-    ImGui::Text("Range Step");
-    ImGui::TableNextColumn();
-    ImGui::Text("%.1lf m", radar_data->range_step);
-
-    // Max Speed
-    ImGui::TableNextRow();
-    ImGui::TableNextColumn();
-    ImGui::Text("Max Speed");
-    ImGui::TableNextColumn();
-    ImGui::Text("%.1lf m/s", cfg.process_cfg.max_speed);
-
-    // Speed step
-    ImGui::TableNextRow();
-    ImGui::TableNextColumn();
-    ImGui::Text("Speed Step");
-    ImGui::TableNextColumn();
-    ImGui::Text("%.1lf m/s", radar_data->speed_step);
     ImGui::EndTable();
   }
 }

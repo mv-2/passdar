@@ -65,6 +65,16 @@ private:
   // Slider values
   int range_slider;
   int speed_slider;
+  int agc_bw_id;
+  std::vector<int> agc_bw_vals = {0, 5, 50, 100};
+  int IF_id;
+  std::vector<int> if_vals = {0, 450, 1620, 2048};
+  int bw_id;
+  std::vector<int> bw_vals = {200, 300, 600, 1536, 5000, 6000, 7000, 8000};
+  int LO_id;
+  std::vector<std::string> LO_vals = {"Auto", "120", "144", "168"};
+  std::vector<std::string> LO_disp_vals = {"Auto", "120 MHz", "144 MHz",
+                                           "168 MHz"};
 
   // Speed Slice
   std::vector<double> range_slice;

@@ -1,7 +1,6 @@
 #ifndef CFGINTERFACE_H
 #define CFGINTERFACE_H
 
-#include <cstdint>
 #include <nlohmann/json.hpp>
 #include <sdrplay_api_tuner.h>
 #include <sys/types.h>
@@ -62,8 +61,8 @@ public:
  * Stores receiver parameters
  */
 struct ReceiverConfig {
-  uint32_t fc;
-  uint32_t fs;
+  int fc;
+  int fs;
   int agc_bandwidth_nr;
   int agc_set_point_nr;
   int gRdB_A;
@@ -86,7 +85,7 @@ struct ReceiverConfig {
  * Processing parameters
  */
 struct ProcessConfig {
-  uint32_t buffer_size;
+  int buffer_size;
   double max_range;
   double max_speed;
   DftWindow dft_window;

@@ -31,6 +31,7 @@ RadarData::RadarData(Config cfg, SpecData *_stream_a_data,
 
   // Calculate range step
   range_step = PHASE_VELOCITY / sample_frequency;
+  max_allowable_range = sample_buffer_size * range_step / 2;
 
   // range points
   speed_step = (stream_a_data->frequency[1] - stream_a_data->frequency[0]) *

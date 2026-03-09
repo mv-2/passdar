@@ -33,6 +33,9 @@ public:
   // maximum measurable speed
   double max_speed;
 
+  // Maximum allowable range measurement
+  double max_allowable_range;
+
   // Speed step in m/s
   double speed_step;
 

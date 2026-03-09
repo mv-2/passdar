@@ -111,9 +111,7 @@ void SpecData::process_spectrum(std::atomic<bool> *exit_flag) {
     // Lock mutex for SpecData so plotting thread does not read spectrum during
     // FFTW process. Perform FFTshift on assignment
     int id_swap;
-    std::cout << "1\n";
     mutex_lock.lock();
-    std::cout << "2\n";
     calc_dft();
     for (unsigned int i = 0; i < buffer_size; i++) {
       id_swap = (i + buffer_size / 2 - 1) % buffer_size;
