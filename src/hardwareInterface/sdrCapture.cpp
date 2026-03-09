@@ -26,6 +26,7 @@ const unsigned int MaxDevs = 1;
 
 Receiver::Receiver(ReceiverConfig receiverCfg) {
   // Assign Receiver parameters
+  ready_flag.store(false);
   fc = receiverCfg.fc;
   fs = receiverCfg.fs;
   agc_bandwidth_nr = receiverCfg.agc_bandwidth_nr;
@@ -247,6 +248,9 @@ void Receiver::run_capture(SpecData *_stream_a_data, SpecData *_stream_b_data,
   // Check for end signal at 1Hz
   while (!exit_flag->load()) {
     sleep(1);
+
+    // Ready after first loop
+    ready_flag.store(true);
   }
 
   // Stop and cleanup

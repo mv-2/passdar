@@ -58,6 +58,9 @@ public:
   // number of columns in ambiguity surface
   int ambiguity_columns;
 
+  // Flag denoting when processing data is ready to be accessed
+  std::atomic<bool> ready_flag;
+
 private:
   // Copied data samples
   int sample_buffer_size;

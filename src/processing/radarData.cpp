@@ -18,6 +18,9 @@ const std::string AMBIGUITY_WISDOM_FILE = "cfg/ambiguity.wisdom";
 
 RadarData::RadarData(Config cfg, SpecData *_stream_a_data,
                      SpecData *_stream_b_data) {
+  // not ready
+  ready_flag.store(false);
+
   // assign data stream pointers
   stream_a_data = _stream_a_data;
   stream_b_data = _stream_b_data;
@@ -275,6 +278,8 @@ void RadarData::process_ambiguity(std::atomic<bool> *exit_flag) {
     }
 
     ambiguity_mutex.unlock();
+    // Ready after first loop
+    ready_flag.store(true);
   }
 
   // free FFTW arrays

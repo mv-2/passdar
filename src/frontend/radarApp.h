@@ -49,6 +49,9 @@ public:
    */
   void run(void);
 
+  // Flag to restart all processing threads
+  std::atomic<bool> restart;
+
 private:
   // Object setup function
   void setup(void);

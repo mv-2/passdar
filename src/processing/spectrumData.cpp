@@ -10,6 +10,9 @@
 const std::string SPECTRUM_WISDOM_FILENAME = "cfg/spectrum.wisdom";
 
 SpecData::SpecData(Config cfg) {
+  // Not ready
+  ready_flag.store(false);
+
   buffer_size = cfg.process_cfg.buffer_size;
 
   // Pointer to raw data object
@@ -103,11 +106,14 @@ void SpecData::calc_dft() {
 }
 
 void SpecData::process_spectrum(std::atomic<bool> *exit_flag) {
+
   while (!exit_flag->load()) {
     // Lock mutex for SpecData so plotting thread does not read spectrum during
     // FFTW process. Perform FFTshift on assignment
     int id_swap;
+    std::cout << "1\n";
     mutex_lock.lock();
+    std::cout << "2\n";
     calc_dft();
     for (unsigned int i = 0; i < buffer_size; i++) {
       id_swap = (i + buffer_size / 2 - 1) % buffer_size;
@@ -118,6 +124,9 @@ void SpecData::process_spectrum(std::atomic<bool> *exit_flag) {
     }
     mutex_lock.unlock();
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // Ready after first loop
+    ready_flag.store(true);
   }
 
   // Free resources

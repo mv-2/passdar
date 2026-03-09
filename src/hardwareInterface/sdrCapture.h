@@ -60,6 +60,9 @@ public:
   bool rf_notch_enable;
   bool dab_notch_enable;
 
+  // Flag denoting when processing data is ready to be accessed
+  std::atomic<bool> ready_flag;
+
 private:
   // API control functions
   void get_device();

@@ -17,17 +17,11 @@ const ImPlotColormap SPECTRUM_COLOUR_MAP = ImPlotColormap_Spectral;
 const ImPlotColormap AMBIGUITY_COLOUR_MAP = ImPlotColormap_Jet;
 const int COLOURBAR_WIDTH = 100;
 
-RadarApp::RadarApp() : cfg(Config()) {
-  // Assign object fields from default config
-  setup();
-}
+RadarApp::RadarApp() : cfg(Config()) {}
 
 RadarApp::RadarApp(Config _cfg) {
   // config
   cfg = _cfg;
-
-  // Assign object fields from default config
-  setup();
 }
 
 void RadarApp::setup(void) {
@@ -64,6 +58,39 @@ void RadarApp::setup(void) {
   case DisplayScale::dB:
     ambiguity_label = "Ambiguity [dB]";
   };
+
+  // Set flag
+  restart.store(false);
+}
+
+void spinner(float radius, ImVec2 pos) {
+  // Spinner util function
+
+  ImVec2 size = ImVec2(radius * 2, radius * 2);
+
+  ImGui::Dummy(size);
+
+  ImDrawList *DrawList = ImGui::GetWindowDrawList();
+  DrawList->PathClear();
+
+  int num_segments = 30;
+  float start = fabsf(sinf(ImGui::GetTime() * 1.8f) * (num_segments - 5));
+
+  float a_min = M_PI * 2.0f * start / num_segments;
+  float a_max = M_PI * 2.0f * (num_segments - 3) / num_segments;
+
+  for (int i = 0; i <= num_segments; i++) {
+    float a = a_min + (i / (float)num_segments) * (a_max - a_min);
+    DrawList->PathLineTo(
+        ImVec2(pos.x + cosf(a + ImGui::GetTime() * 8) * radius,
+               pos.y + sinf(a + ImGui::GetTime() * 8) * radius));
+  }
+
+  DrawList->PathStroke(IM_COL32(255, 255, 255, 255), false, 5);
+
+  ImVec2 text_size = ImGui::CalcTextSize("Initialising");
+  ImGui::SetCursorPos({pos.x - text_size.x / 2, pos.y - text_size.y / 2});
+  ImGui::Text("Initialising");
 }
 
 GLFWwindow *RadarApp::init_window() {
@@ -118,24 +145,39 @@ void RadarApp::run() {
   }
 
   // process end flag
-  std::atomic<bool> exit_flag(false);
-
-  // Initialise threads
-  captureThread = std::thread(
-      [&] { receiver->run_capture(stream_a_data, stream_b_data, &exit_flag); });
-  spectrumThread_A =
-      std::thread([&] { stream_a_data->process_spectrum(&exit_flag); });
-  spectrumThread_B =
-      std::thread([&] { stream_b_data->process_spectrum(&exit_flag); });
-  ambiguityThread =
-      std::thread([&] { radar_data->process_ambiguity(&exit_flag); });
+  std::atomic<bool> exit_flag;
 
   // Window open flag
   bool show_window = true;
 
-  // Run and update frames
+  // Run and restart until window closed
   while (show_window && !glfwWindowShouldClose(window)) {
-    update_window(window, &show_window);
+    // reset all fields
+    exit_flag.store(false);
+    setup();
+
+    // Initialise threads
+    captureThread = std::thread([&] {
+      receiver->run_capture(stream_a_data, stream_b_data, &exit_flag);
+    });
+    spectrumThread_A =
+        std::thread([&] { stream_a_data->process_spectrum(&exit_flag); });
+    spectrumThread_B =
+        std::thread([&] { stream_b_data->process_spectrum(&exit_flag); });
+    ambiguityThread =
+        std::thread([&] { radar_data->process_ambiguity(&exit_flag); });
+
+    // Run and update frames
+    while (show_window && !glfwWindowShouldClose(window) && !restart.load()) {
+      update_window(window, &show_window);
+    }
+
+    // Join threads to end processes
+    exit_flag.store(true);
+    ambiguityThread.join();
+    spectrumThread_A.join();
+    spectrumThread_B.join();
+    captureThread.join();
   }
 
   // Cleanup
@@ -145,13 +187,6 @@ void RadarApp::run() {
   ImGui::DestroyContext();
   glfwDestroyWindow(window);
   glfwTerminate();
-
-  // Join threads to end processes
-  exit_flag.store(true);
-  ambiguityThread.join();
-  spectrumThread_A.join();
-  spectrumThread_B.join();
-  captureThread.join();
 }
 
 void RadarApp::receiver_spectra_frame_update(void) {
@@ -165,9 +200,13 @@ void RadarApp::receiver_spectra_frame_update(void) {
 
       // Setup and labels
       ImPlot::SetupAxes("Frequency [MHz]", "Amplitude [dB]");
-      stream_a_data->mutex_lock.lock();
+      ImPlot::SetupAxisLimits(ImAxis_X1, stream_a_data->frequency.front(),
+                              stream_a_data->frequency.back(),
+                              ImPlotCond_Always);
+      ImPlot::SetupAxisLimits(ImAxis_Y1, 30, 120, ImPlotCond_Once);
 
       // Plot
+      stream_a_data->mutex_lock.lock();
       ImPlot::PlotLine("Receiver A", stream_a_data->frequency.data(),
                        stream_a_data->spectrum.data(),
                        stream_a_data->frequency.size());
@@ -180,9 +219,13 @@ void RadarApp::receiver_spectra_frame_update(void) {
 
       // Setup and labels
       ImPlot::SetupAxes("Frequency [MHz]", "Amplitude [dB]");
-      stream_b_data->mutex_lock.lock();
+      ImPlot::SetupAxisLimits(ImAxis_X1, stream_b_data->frequency.front(),
+                              stream_b_data->frequency.back(),
+                              ImPlotCond_Always);
+      ImPlot::SetupAxisLimits(ImAxis_Y1, 30, 120, ImPlotCond_Once);
 
       // Plot
+      stream_b_data->mutex_lock.lock();
       ImPlot::PlotLine("Receiver B", stream_b_data->frequency.data(),
                        stream_b_data->spectrum.data(),
                        stream_b_data->frequency.size());
@@ -234,10 +277,11 @@ void RadarApp::range_doppler_frame_update(void) {
 }
 
 void RadarApp::ambiguity_slice_frame_update(void) {
-
+  // Get available areas
   int window_width = ImGui::GetContentRegionAvail().x;
   int half_width =
       ImGui::GetContentRegionAvail().x / 2 - ImGui::GetStyle().ItemSpacing.x;
+
   // Reload slices when available
   if (radar_data->ambiguity_mutex.try_lock()) {
 
@@ -301,7 +345,7 @@ void RadarApp::ambiguity_slice_frame_update(void) {
                               ImGuiCond_Always);
       ImPlot::SetupAxisLimits(ImAxis_Y1, cfg.process_cfg.ambiguity_lims[0],
                               cfg.process_cfg.ambiguity_lims[1],
-                              ImGuiCond_Always);
+                              ImGuiCond_Once);
 
       // Plot
       ImPlot::PlotLine("Range Slice", speed_vals.data(), range_slice.data(),
@@ -320,7 +364,7 @@ void RadarApp::ambiguity_slice_frame_update(void) {
                               ImGuiCond_Always);
       ImPlot::SetupAxisLimits(ImAxis_Y1, cfg.process_cfg.ambiguity_lims[0],
                               cfg.process_cfg.ambiguity_lims[1],
-                              ImGuiCond_Always);
+                              ImGuiCond_Once);
 
       // plot
       ImPlot::PlotLine("Speed Slice", range_vals.data(), speed_slice.data(),
@@ -503,35 +547,46 @@ void RadarApp::update_window(GLFWwindow *window, bool *show_window) {
   ImGui::SetNextWindowSize(viewport->Size);
   ImGui::Begin("Passdar", show_window);
 
-  // Calculate required area values
+  if (!receiver->ready_flag.load() || !stream_a_data->ready_flag.load() ||
+      !stream_b_data->ready_flag.load() || !radar_data->ready_flag.load()) {
+    // Draw spinner until all threads are ready
+    ImVec2 pos;
+    pos.x = ImGui::GetContentRegionAvail().x / 2;
+    pos.y = ImGui::GetContentRegionAvail().y / 2;
+    spinner(100, pos);
+  } else {
 
-  // Tab bar to select each function
-  if (ImGui::BeginTabBar("Passdar")) {
+    // Tab bar to select each function
+    if (ImGui::BeginTabBar("Passdar")) {
 
-    // Receiver spectra tab
-    if (ImGui::BeginTabItem("Receiver Spectra")) {
-      receiver_spectra_frame_update();
-      ImGui::EndTabItem();
+      // Receiver spectra tab
+      if (ImGui::BeginTabItem("Receiver Spectra")) {
+        receiver_spectra_frame_update();
+        ImGui::EndTabItem();
+      }
+
+      // Range - Doppler heatmap tab
+      if (ImGui::BeginTabItem("Range - Doppler")) {
+        range_doppler_frame_update();
+        ImGui::EndTabItem();
+      }
+
+      // Ambiguity slices
+      if (ImGui::BeginTabItem("Ambiguity Slices")) {
+        ambiguity_slice_frame_update();
+        ImGui::EndTabItem();
+      }
+
+      // Config settings tab
+      if (ImGui::BeginTabItem("Settings")) {
+        settings_frame_update();
+        ImGui::EndTabItem();
+      }
+      ImGui::EndTabBar();
     }
-
-    // Range - Doppler heatmap tab
-    if (ImGui::BeginTabItem("Range - Doppler")) {
-      range_doppler_frame_update();
-      ImGui::EndTabItem();
+    if (ImGui::Button("Restart", ImVec2(-1, -1))) {
+      restart.store(true);
     }
-
-    // Ambiguity slices
-    if (ImGui::BeginTabItem("Ambiguity Slices")) {
-      ambiguity_slice_frame_update();
-      ImGui::EndTabItem();
-    }
-
-    // Config settings tab
-    if (ImGui::BeginTabItem("Settings")) {
-      settings_frame_update();
-      ImGui::EndTabItem();
-    }
-    ImGui::EndTabBar();
   }
   ImGui::End();
 

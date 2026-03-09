@@ -1,6 +1,7 @@
 #ifndef SPECTRUMDATA_H
 #define SPECTRUMDATA_H
 
+#include <atomic>
 #include <fftw3.h>
 #include <mutex>
 #include <vector>
@@ -53,6 +54,9 @@ public:
 
   // Mutex
   std::mutex mutex_lock;
+
+  // Flag denoting when processing data is ready to be accessed
+  std::atomic<bool> ready_flag;
 
 private:
   // FFTW plan
