@@ -430,9 +430,6 @@ void RadarApp::settings_frame_update(void) {
     ImGui::InputInt("Sample Buffer Length", &cfg.process_cfg.buffer_size, 1,
                     1000);
     if (ImGui::IsItemDeactivatedAfterEdit()) {
-      cfg.process_cfg.buffer_size =
-          cfg.process_cfg.buffer_size -
-          (cfg.process_cfg.buffer_size % radar_data->n_speed);
       update_speed_vars();
     }
 
@@ -698,11 +695,13 @@ void RadarApp::update_window(GLFWwindow *window, bool *show_window) {
 }
 
 void RadarApp::update_speed_vars(void) {
+  cfg.process_cfg.buffer_size -= cfg.process_cfg.buffer_size % n_speed;
   double df =
       static_cast<double>(cfg.receiver_cfg.fs) / cfg.process_cfg.buffer_size;
   speed_step = df * PHASE_VELOCITY / (2 * cfg.receiver_cfg.fc);
   n_speed = cfg.process_cfg.max_speed / speed_step;
-  cfg.process_cfg.max_speed = n_speed * speed_step;
+  cfg.process_cfg.buffer_size +=
+      (n_speed - cfg.process_cfg.buffer_size % n_speed);
 }
 
 void RadarApp::update_range_vars(void) {
