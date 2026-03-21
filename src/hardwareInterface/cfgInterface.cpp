@@ -61,6 +61,22 @@ nlohmann::json cfgInterface::load_config(std::string cfg_path) {
   return nlohmann::json::parse(cfg_file);
 }
 
+DetectionConfig::DetectionConfig(nlohmann::json json_det) {
+  cfar_multiplier = json_det["cfar_multiplier"];
+  range_window = json_det["range_window"];
+  range_guard = json_det["range_guard"];
+  speed_window = json_det["speed_window"];
+  speed_guard = json_det["speed_guard"];
+}
+
+DetectionConfig::DetectionConfig() {
+  cfar_multiplier = 1.3;
+  range_window = 0;
+  range_guard = 0;
+  speed_window = 0;
+  speed_guard = 0;
+}
+
 ReceiverConfig::ReceiverConfig(nlohmann::json json_rcv) {
   dec_factor = json_rcv["dec_factor"];
   fc = json_rcv["fc"];
@@ -112,13 +128,16 @@ ProcessConfig::ProcessConfig() {
   dft_window = DftWindow::Rectangular;
 }
 
-Config::Config(std::string cfg_path) : receiver_cfg(), process_cfg() {
+Config::Config(std::string cfg_path)
+    : receiver_cfg(), process_cfg(), detection_config() {
   nlohmann::json json_cfg = cfgInterface::load_config(cfg_path);
   receiver_cfg = ReceiverConfig(json_cfg["receiver"]);
   process_cfg = ProcessConfig(json_cfg["processing"]);
+  detection_config = DetectionConfig(json_cfg["detection"]);
 }
 
-Config::Config() : receiver_cfg(), process_cfg() {
+Config::Config() : receiver_cfg(), process_cfg(), detection_config() {
   receiver_cfg = ReceiverConfig();
   process_cfg = ProcessConfig();
+  detection_config = DetectionConfig();
 }

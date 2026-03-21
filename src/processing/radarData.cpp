@@ -90,6 +90,12 @@ RadarData::RadarData(Config cfg, SpecData *_stream_a_data,
   for (int i = -n_speed; i < n_speed; i++) {
     speed_vals.push_back(static_cast<double>(i) * speed_step);
   }
+
+  // CFAR detection array preallocation
+  detection.resize(n_range * ambiguity_columns);
+
+  // Assign config for CFAR processing
+  detection_config = cfg.detection_config;
 }
 
 void RadarData::initialise_fftw_plans(void) {
@@ -233,8 +239,8 @@ void RadarData::ambiguity_thread_calc(int row) {
   return;
 }
 
-void RadarData::process_ambiguity(std::atomic<bool> *exit_flag,
-                                  std::mutex *fftw_plan_mutex) {
+void RadarData::radar_process(std::atomic<bool> *exit_flag,
+                              std::mutex *fftw_plan_mutex) {
   // Initialise fftw plans
   fftw_plan_mutex->lock();
   initialise_fftw_plans();
@@ -291,7 +297,11 @@ void RadarData::process_ambiguity(std::atomic<bool> *exit_flag,
       amb_threads.pop_front();
     }
 
+    // CFAR processing
+    CA_CFAR();
+
     ambiguity_mutex.unlock();
+
     // Ready after first loop
     ready_flag.store(true);
   }
@@ -307,4 +317,68 @@ void RadarData::process_ambiguity(std::atomic<bool> *exit_flag,
   fftw_free(twiddle_factors);
 
   fftw_cleanup();
+}
+
+void RadarData::CA_CFAR() {
+  // Vector for averaginge
+  double ave_vals;
+  int n_vals;
+
+  for (int r_id = 0; r_id < n_range; r_id++) {
+    for (int v_id = 0; v_id < ambiguity_columns; v_id++) {
+      // reset ave_vals and n_vals
+      ave_vals = 0.0;
+      n_vals = 0;
+
+      // Set search limits
+      int r_min = std::max(0, r_id - detection_config.range_window);
+      int r_max = std::min(n_range, r_id + detection_config.range_window + 1);
+      int v_min = std::max(0, v_id - detection_config.speed_window);
+      int v_max =
+          std::min(ambiguity_columns, v_id + detection_config.speed_window + 1);
+
+      // Add first cells outside of guard region
+      for (int r_ave_id = r_min;
+           r_ave_id < r_id - detection_config.range_guard + 1; r_ave_id++) {
+        for (int v_ave_id = v_min;
+             v_ave_id < v_id - detection_config.speed_guard + 1; v_ave_id++) {
+          ave_vals += ambiguity[r_ave_id * ambiguity_columns + v_ave_id];
+          n_vals++;
+        }
+        for (int v_ave_id = v_id + detection_config.speed_guard;
+             v_ave_id < v_max; v_ave_id++) {
+          ave_vals += ambiguity[r_ave_id * ambiguity_columns + v_ave_id];
+          n_vals++;
+        }
+      }
+
+      // Add cells in guard region
+      for (int r_ave_id = r_min; r_ave_id < r_max; r_ave_id++) {
+        for (int v_ave_id = v_min; v_ave_id < v_max; v_ave_id++) {
+          ave_vals += ambiguity[r_ave_id * ambiguity_columns + v_ave_id];
+          n_vals++;
+        }
+      }
+
+      // Add cells following guard region
+      for (int r_ave_id = r_id + detection_config.range_guard; r_ave_id < r_max;
+           r_ave_id++) {
+        for (int v_ave_id = v_min;
+             v_ave_id < v_id - detection_config.speed_guard + 1; v_ave_id++) {
+          ave_vals += ambiguity[r_ave_id * ambiguity_columns + v_ave_id];
+          n_vals++;
+        }
+        for (int v_ave_id = v_id + detection_config.speed_guard;
+             v_ave_id < v_max; v_ave_id++) {
+          ave_vals += ambiguity[r_ave_id * ambiguity_columns + v_ave_id];
+          n_vals++;
+        }
+      }
+
+      // Determine if ambiguity breaks threshold
+      detection[r_id * ambiguity_columns + v_id] =
+          ambiguity[r_id * ambiguity_columns + v_id] >=
+          (detection_config.cfar_multiplier * ave_vals / n_vals);
+    }
+  }
 }

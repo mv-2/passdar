@@ -74,6 +74,7 @@ private:
   std::thread ambiguityThread;
 
   // Slider values
+  // TODO: Link to actual SDRplay structs and enums rather than this
   int range_slider;
   int speed_slider;
   int agc_bw_id;
@@ -100,6 +101,7 @@ private:
   void range_doppler_frame_update(void);
   void ambiguity_slice_frame_update(void);
   void settings_frame_update(void);
+  void detection_frame_update(void);
 
   // Create ImGui window
   GLFWwindow *init_window(void);
@@ -112,6 +114,9 @@ private:
 
   // Ambiguity copy for keeping window updated
   std::vector<double> ambiguity_copy;
+
+  // Ambiguity copy for keeping window updated
+  std::vector<int> detection_copy;
 
   // FFTW planning mutex
   std::mutex fftw_plan_mutex;

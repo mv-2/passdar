@@ -50,6 +50,9 @@ public:
   // ambiguity surface
   std::vector<double> ambiguity;
 
+  // detection array
+  std::vector<int> detection;
+
   /*
    * Constructor for RadarData class
    *
@@ -61,8 +64,7 @@ public:
   /*
    * Calculates ambiguity surface between receivers.
    */
-  void process_ambiguity(std::atomic<bool> *exit_flag,
-                         std::mutex *fftw_plan_mutex);
+  void radar_process(std::atomic<bool> *exit_flag, std::mutex *fftw_plan_mutex);
 
   // number of columns in ambiguity surface
   int ambiguity_columns;
@@ -77,6 +79,12 @@ private:
   fftw_complex *data_b_copy;
   std::vector<fftw_complex *> delay_lag_product;
   int delay_lag_length;
+
+  // CFAR functions
+  void CA_CFAR();
+
+  // Detection config
+  DetectionConfig detection_config;
 
   // Set up fftw plans
   void initialise_fftw_plans(void);

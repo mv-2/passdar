@@ -21,5 +21,12 @@
     "ambiguity_scale": "dB",
     "ambiguity_min": 1e2,
     "ambiguity_max": 140
+  },
+  "detection": {
+    "cfar_multiplier": 1.2,
+    "range_window": 30,
+    "range_guard": 5,
+    "speed_window": 5,
+    "speed_guard": 2
   }
 }

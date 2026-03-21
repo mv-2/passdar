@@ -16,6 +16,7 @@
 // Display constants
 const ImPlotColormap SPECTRUM_COLOUR_MAP = ImPlotColormap_Spectral;
 const ImPlotColormap AMBIGUITY_COLOUR_MAP = ImPlotColormap_Jet;
+const ImPlotColormap DETECTION_COLOUR_MAP = ImPlotColormap_Greys;
 const int COLOURBAR_WIDTH = 100;
 
 RadarApp::RadarApp() : cfg(Config()) {}
@@ -33,7 +34,9 @@ void RadarApp::setup(void) {
   radar_data = new RadarData(cfg, stream_a_data, stream_b_data);
 
   // Preallocate vectors
-  ambiguity_copy.resize(radar_data->ambiguity_columns * radar_data->n_speed);
+  ambiguity_copy.resize(radar_data->ambiguity_columns * radar_data->n_speed,
+                        0.0);
+  detection_copy.resize(radar_data->ambiguity_columns * radar_data->n_speed, 0);
   range_slice.resize(radar_data->ambiguity_columns);
   speed_slice.resize(radar_data->n_range);
 
@@ -159,7 +162,7 @@ void RadarApp::run() {
     spectrumThread_B = std::thread(
         [&] { stream_b_data->process_spectrum(&exit_flag, &fftw_plan_mutex); });
     ambiguityThread = std::thread(
-        [&] { radar_data->process_ambiguity(&exit_flag, &fftw_plan_mutex); });
+        [&] { radar_data->radar_process(&exit_flag, &fftw_plan_mutex); });
 
     // Update to rounded settings
     // NOTE: This isn't thread safe which is fine in this case unless computer
@@ -627,6 +630,33 @@ void RadarApp::settings_frame_update(void) {
   }
 }
 
+void RadarApp::detection_frame_update(void) {
+  // Set heatmap style
+  ImPlot::PushColormap(DETECTION_COLOUR_MAP);
+
+  // Range - Doppler plot
+  if (ImPlot::BeginPlot("Detection", ImVec2(-1, -1), ImPlotFlags_NoLegend)) {
+    ImPlot::SetupAxes("Speed [m/s]", "Range [m]");
+
+    // Set ambiguity to latest data if available
+    if (radar_data->ambiguity_mutex.try_lock()) {
+      detection_copy = radar_data->detection;
+      radar_data->ambiguity_mutex.unlock();
+    }
+
+    // Plot ambiguity copy
+    ImPlot::PlotHeatmap("Detection", detection_copy.data(), radar_data->n_range,
+                        radar_data->ambiguity_columns, 1, 0, NULL,
+                        {-radar_data->max_speed, 0},
+                        {radar_data->max_speed, cfg.process_cfg.max_range});
+
+    ImPlot::EndPlot();
+  }
+
+  // Pop style stack
+  ImPlot::PopColormap();
+}
+
 void RadarApp::update_window(GLFWwindow *window, bool *show_window) {
 
   glfwPollEvents();
@@ -664,9 +694,15 @@ void RadarApp::update_window(GLFWwindow *window, bool *show_window) {
         ImGui::EndTabItem();
       }
 
-      // Ambiguity slices
+      // Ambiguity slice tab
       if (ImGui::BeginTabItem("Ambiguity Slices")) {
         ambiguity_slice_frame_update();
+        ImGui::EndTabItem();
+      }
+
+      // Detection tab
+      if (ImGui::BeginTabItem("Detection")) {
+        detection_frame_update();
         ImGui::EndTabItem();
       }
 

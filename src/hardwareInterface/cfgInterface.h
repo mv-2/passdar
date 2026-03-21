@@ -61,6 +61,20 @@ public:
 };
 
 /*
+ * Detection parameters
+ */
+struct DetectionConfig {
+  double cfar_multiplier;
+  int range_window;
+  int range_guard;
+  int speed_window;
+  int speed_guard;
+
+  DetectionConfig(nlohmann::json json_det);
+  DetectionConfig();
+};
+
+/*
  * Stores receiver parameters
  */
 struct ReceiverConfig {
@@ -104,6 +118,7 @@ struct ProcessConfig {
 struct Config {
   ReceiverConfig receiver_cfg;
   ProcessConfig process_cfg;
+  DetectionConfig detection_config;
 
   Config(std::string cfg_path);
   Config();
