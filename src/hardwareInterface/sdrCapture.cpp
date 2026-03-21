@@ -24,21 +24,10 @@ SpecData *stream_b_data;
 // One (1) device
 const unsigned int MaxDevs = 1;
 
-Receiver::Receiver(ReceiverConfig receiverCfg) {
+Receiver::Receiver(ReceiverConfig _receiver_cfg) {
   // Assign Receiver parameters
   ready_flag.store(false);
-  fc = receiverCfg.fc;
-  agc_bandwidth_nr = receiverCfg.agc_bandwidth_nr;
-  agc_set_point_nr = receiverCfg.agc_set_point_nr;
-  gRdB_A = receiverCfg.gRdB_A;
-  gRdB_B = receiverCfg.gRdB_B;
-  lna_state = receiverCfg.lna_state;
-  dec_factor = receiverCfg.dec_factor;
-  rf_notch_enable = receiverCfg.rf_notch_enable;
-  dab_notch_enable = receiverCfg.dab_notch_enable;
-  ifType = receiverCfg.ifType;
-  bwType = receiverCfg.bwType;
-  loType = receiverCfg.loType;
+  receiver_cfg = _receiver_cfg;
 }
 
 void Receiver::start_api() {
@@ -190,43 +179,43 @@ void Receiver::set_device_parameters() {
   }
 
   // Tuner frequency
-  chParams->tunerParams.rfFreq.rfHz = fc;
+  chParams->tunerParams.rfFreq.rfHz = receiver_cfg.fc;
 
   // Decimation
-  chParams->ctrlParams.decimation.decimationFactor = dec_factor;
+  chParams->ctrlParams.decimation.decimationFactor = receiver_cfg.dec_factor;
 
   // AGC
   chParams->ctrlParams.agc.enable = sdrplay_api_AGC_DISABLE;
-  if (agc_bandwidth_nr == 5) {
+  if (receiver_cfg.agc_bandwidth_nr == 5) {
     chParams->ctrlParams.agc.enable = sdrplay_api_AGC_5HZ;
-  } else if (agc_bandwidth_nr == 50) {
+  } else if (receiver_cfg.agc_bandwidth_nr == 50) {
     chParams->ctrlParams.agc.enable = sdrplay_api_AGC_50HZ;
-  } else if (agc_bandwidth_nr == 100) {
+  } else if (receiver_cfg.agc_bandwidth_nr == 100) {
     chParams->ctrlParams.agc.enable = sdrplay_api_AGC_100HZ;
   }
   if (chParams->ctrlParams.agc.enable != sdrplay_api_AGC_DISABLE) {
     chParams->ctrlParams.agc.setPoint_dBfs =
-        (0 < agc_set_point_nr) ? 0 : agc_set_point_nr;
+        (0 < receiver_cfg.agc_set_point_nr) ? 0 : receiver_cfg.agc_set_point_nr;
   }
 
   // Set gain reduction and LNA state
-  deviceParams->rxChannelA->tunerParams.gain.gRdB = gRdB_A;
-  deviceParams->rxChannelB->tunerParams.gain.gRdB = gRdB_B;
-  deviceParams->rxChannelA->tunerParams.gain.LNAstate = lna_state;
-  deviceParams->rxChannelB->tunerParams.gain.LNAstate = lna_state;
+  deviceParams->rxChannelA->tunerParams.gain.gRdB = receiver_cfg.gRdB_A;
+  deviceParams->rxChannelB->tunerParams.gain.gRdB = receiver_cfg.gRdB_B;
+  deviceParams->rxChannelA->tunerParams.gain.LNAstate = receiver_cfg.lna_state;
+  deviceParams->rxChannelB->tunerParams.gain.LNAstate = receiver_cfg.lna_state;
 
   // set decimation parameters
   chParams->ctrlParams.decimation.enable = 1;
-  chParams->ctrlParams.decimation.decimationFactor = dec_factor;
+  chParams->ctrlParams.decimation.decimationFactor = receiver_cfg.dec_factor;
 
   // IF, LO and BW parameters
-  chParams->tunerParams.ifType = ifType;
-  chParams->tunerParams.bwType = bwType;
-  chParams->tunerParams.loMode = loType;
+  chParams->tunerParams.ifType = receiver_cfg.ifType;
+  chParams->tunerParams.bwType = receiver_cfg.bwType;
+  chParams->tunerParams.loMode = receiver_cfg.loType;
 
   // Notch filter flags
-  chParams->rspDuoTunerParams.rfNotchEnable = rf_notch_enable;
-  chParams->rspDuoTunerParams.rfDabNotchEnable = dab_notch_enable;
+  chParams->rspDuoTunerParams.rfNotchEnable = receiver_cfg.rf_notch_enable;
+  chParams->rspDuoTunerParams.rfDabNotchEnable = receiver_cfg.dab_notch_enable;
 
   // Callback function assignment
   cbFns.StreamACbFn = stream_a_callback_static;

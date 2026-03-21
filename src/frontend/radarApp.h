@@ -12,113 +12,168 @@
 #include "../hardwareInterface/sdrCapture.h"
 #include "../processing/radarData.h"
 
+/**
+ * @brief Class to intake, process and display all radar data
+ */
 class RadarApp {
 public:
-  /*
-   * RadarApp constructor
-   */
-  RadarApp(Config cfg);
+  /// @name Constructors
+  /// @{
+  RadarApp(Config cfg); /// Constructor from Config struct
+  RadarApp();           /// Default Constructor
+  /// @}
 
-  /*
-   * Default constructor for when no config file is provided
-   */
-  RadarApp();
-
-  /*
-   * Receiver connection and data capture
-   */
-  Receiver *receiver;
-
-  /*
-   * Receiever A data stream
-   */
-  SpecData *stream_a_data;
-
-  /*
-   * Receiever B data stream
-   */
-  SpecData *stream_b_data;
-
-  /*
-   * Radar ambiguity data
-   */
-  RadarData *radar_data;
-
-  /*
-   * Main app running loop
+  /**
+   * @brief Run app with default or config defined settings
    */
   void run(void);
 
-  // Flag to restart all processing threads
+  /**
+   * @brief Receiver object pointing to sdrplay data capture object
+   */
+  Receiver *receiver;
+
+  /**
+   * @brief Receiever A data
+   */
+  SpecData *stream_a_data;
+
+  /**
+   * @brief Receiever B data
+   */
+  SpecData *stream_b_data;
+
+  /**
+   * @brief Radar ambiguity data
+   * @details Holds ambiguity and detection processing outputs
+   */
+  RadarData *radar_data;
+
+  /**
+   * @brief Flag to restart app with updated settings
+   */
   std::atomic<bool> restart;
 
 private:
-  // Object setup function
+  /**
+   * @brief Initial setup of all app functions and data containers
+   */
   void setup(void);
 
-  // Speed data variables
-  int n_speed;
-  double speed_step;
+  /**
+   * @brief Update speed variables to ensure that buffer size is divisible by
+   * n_speed for pruned FFT calculation
+   */
   void update_speed_vars(void);
 
-  // Range data variables
-  int n_range;
-  double range_step;
-  double max_allowable_range;
+  /**
+   * @brief Update related range variables for consistency
+   */
   void update_range_vars(void);
 
-  // Threads
-  std::thread captureThread;
-  std::thread spectrumThread_A;
-  std::thread spectrumThread_B;
-  std::thread ambiguityThread;
-
-  // Slider values
-  // TODO: Link to actual SDRplay structs and enums rather than this
-  int range_slider;
-  int speed_slider;
-  int agc_bw_id;
-  std::vector<int> agc_bw_vals = {0, 5, 50, 100};
-  int IF_id;
-  std::vector<int> if_vals = {0, 450, 1620, 2048};
-  int bw_id;
-  std::vector<int> bw_vals = {200, 300, 600, 1536, 5000, 6000, 7000, 8000};
-  int LO_id;
-  std::vector<std::string> LO_vals = {"Auto", "120", "144", "168"};
-  std::vector<std::string> LO_disp_vals = {"Auto", "120 MHz", "144 MHz",
-                                           "168 MHz"};
-
-  // Speed Slice
-  std::vector<double> range_slice;
-  std::vector<double> speed_slice;
-
-  // Ambiguity scale label
-  std::string ambiguity_label;
-
-  // Frame update functions
-  void update(void);
-  void receiver_spectra_frame_update(void);
-  void range_doppler_frame_update(void);
-  void ambiguity_slice_frame_update(void);
-  void settings_frame_update(void);
-  void detection_frame_update(void);
-
-  // Create ImGui window
+  /**
+   * @brief Create ImGui window with GLFW & OpenGL backend
+   */
   GLFWwindow *init_window(void);
 
-  // Update window
-  void update_window(GLFWwindow *window, bool *show_window);
+  // Frame update functions
+  /// @name GUI frame update functions
+  /// @{
+  void update_window(GLFWwindow *window,
+                     bool *show_window);    /// Window update wrapper
+  void receiver_spectra_frame_update(void); /// Update receiver spectra tab
+  void range_doppler_frame_update(void);    /// Update range-doppler tab
+  void ambiguity_slice_frame_update(void);  /// Update ambiguity slice tab
+  void detection_frame_update(void);        /// Update detection tab
+  void settings_frame_update(void);         /// Update settings tab
+  /// @}
 
-  // Config
+  /**
+   * @brief FFTW planning mutex
+   * @details Ensure FFTW plans are generated in a thread safe manner
+   */
+  std::mutex fftw_plan_mutex;
+
+  /**
+   * @brief Config struct
+   */
   Config cfg;
 
-  // Ambiguity copy for keeping window updated
-  std::vector<double> ambiguity_copy;
+  /// Range slice data
+  std::vector<double> range_slice;
 
-  // Ambiguity copy for keeping window updated
-  std::vector<int> detection_copy;
+  /// Speed slice data
+  std::vector<double> speed_slice;
 
-  // FFTW planning mutex
-  std::mutex fftw_plan_mutex;
+  /// @name Data copies
+  /// @{
+  std::vector<double>
+      ambiguity_copy; /// Copy of ambiguity data to update heatmap frames
+  std::vector<int>
+      detection_copy; /// Copy of detection data to update detection frames
+  /// @}
+
+  /**
+   * @brief Ambiguity scale label & units
+   * @details Label will denote dB or linear scale accordingly
+   */
+  std::string ambiguity_label;
+
+  /// @name Worker threads
+  /// @{
+  std::thread captureThread;    /// Thread listening to SDR device and updating
+                                /// data buffers
+  std::thread spectrumThread_A; /// Thread processing receiver A spectra
+  std::thread spectrumThread_B; /// Thread processing receiver B spectra
+  std::thread ambiguityThread;  /// Thread processing ambiguity surface
+  /// @}
+
+  /// Speed step size between ambiguity points
+  double speed_step;
+
+  /// Range step size between ambiguity points
+  double range_step;
+
+  /// Number of speed points calculated for ambiguity
+  int n_speed;
+
+  /// Number of range points calculated for ambiguity
+  int n_range;
+
+  // TODO: Link to actual SDRplay structs and enums rather than this
+  /// @name Settings slider values
+  /// @{
+  /// AGC bandwidth values
+  std::vector<int> agc_bw_vals = {0, 5, 50, 100};
+  /// IF filter values
+  std::vector<int> if_vals = {0, 450, 1620, 2048};
+
+  /// Receiver bandwidth values
+  std::vector<int> bw_vals = {200, 300, 600, 1536, 5000, 6000, 7000, 8000};
+
+  /// LO filter values
+  std::vector<std::string> LO_vals = {"Auto", "120", "144", "168"};
+
+  /// LO filter values for display
+  std::vector<std::string> LO_disp_vals = {"Auto", "120 MHz", "144 MHz",
+                                           "168 MHz"};
+  /// Select range slice of ambiguity surface
+  int range_slice_slider;
+
+  /// Select speed slice of ambiguity surface
+  int speed_slice_slider;
+
+  /// Slider ID of AGC bandwidth value
+  int agc_bw_id;
+
+  /// Slider ID of IF filter value
+  int IF_id;
+
+  /// Slider ID of reciever bandwidth value
+  int bw_id;
+
+  /// Slider ID of LO filter value
+  int LO_id;
+  /// @}
 };
 #endif

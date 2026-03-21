@@ -1,7 +1,6 @@
 #ifndef SDRCAPTURE_H
 #define SDRCAPTURE_H
 
-#include <cstdint>
 #include <sdrplay_api.h>
 #include <sdrplay_api_callback.h>
 #include <sdrplay_api_tuner.h>
@@ -10,16 +9,19 @@
 #include "../processing/spectrumData.h"
 #include "cfgInterface.h"
 
+/**
+ * @brief Receiver class to run data capture process with SDRPlay RSPDuo
+ */
 class Receiver {
 public:
-  /* Receiver class constructor
+  /* @brief Receiver class constructor
    *
-   * @param cfg_path file path to json config file
+   * @param receiver_cfg ReceiverConfig object as defined by user
    */
   Receiver(ReceiverConfig receiverCfg);
 
   /*
-   * Data capture looping function.
+   * @brief Data capture looping function.
    *
    * @param stream_a_data Pointer to SpecData object for stream A.
    * @param stream_b_data Pointer to SpecData object for stream B.
@@ -29,61 +31,46 @@ public:
   void run_capture(SpecData *stream_a_data, SpecData *stream_b_data,
                    std::atomic<bool> *exit_flag);
 
-  /*
-   * Open API, validate version and set device parameters
-   */
-  void start_api();
+  void
+  start_api(void); ///  Open API, validate version and set device parameters
 
-  /*
-   * Initialise receiver device
-   */
-  void initialise();
+  void initialise(void); /// Initialise receiver device
 
-  /*
-   * Stop API and cleanup
-   */
-  void stop_api();
+  void stop_api(void); /// Stop API and cleanup
 
-  // Required params
-  uint32_t fc;
-  int agc_bandwidth_nr;
-  int agc_set_point_nr;
-  int _gain_reduction_nr_a;
-  int gRdB_A;
-  int gRdB_B;
-  int lna_state;
-  int dec_factor;
-  sdrplay_api_If_kHzT ifType;
-  sdrplay_api_Bw_MHzT bwType;
-  sdrplay_api_LoModeT loType;
-  bool rf_notch_enable;
-  bool dab_notch_enable;
+  ReceiverConfig receiver_cfg; /// User defined config parameters
 
-  // Flag denoting when processing data is ready to be accessed
-  std::atomic<bool> ready_flag;
+  std::atomic<bool>
+      ready_flag; /// Flag denoting when processing data is ready to be accessed
 
 private:
-  // API control functions
-  void get_device();
-  void set_device_parameters();
-  void cleanup();
+  /// @name  API control functions
+  /// @{
+  void get_device();            /// Get available device address
+  void set_device_parameters(); /// Setup device with required parameters
+  void cleanup();               /// Close API
+  /// @}
 
-  // Callback functions
+  /// @name Callback functions
+  /// @{
+  /// Default callback signature to receiver A
   void stream_a_callback(short *xi, short *xq,
                          sdrplay_api_StreamCbParamsT *params,
                          unsigned int numSamples, unsigned int reset,
                          void *cbContext);
 
+  /// Default callback signature to receiver B
   void stream_b_callback(short *xi, short *xq,
                          sdrplay_api_StreamCbParamsT *params,
                          unsigned int numSamples, unsigned int reset,
                          void *cbContext);
 
+  /// Default callback for device event
   void event_callback(sdrplay_api_EventT eventId,
                       sdrplay_api_TunerSelectT tuner,
                       sdrplay_api_EventParamsT *params, void *cbContext);
 
-  // Static casting of functions
+  /// Static casting C-style default receiver A callback for C++ use
   static void stream_a_callback_static(short *xi, short *xq,
                                        sdrplay_api_StreamCbParamsT *params,
                                        unsigned int numSamples,
@@ -92,6 +79,7 @@ private:
         xi, xq, params, numSamples, reset, cbContext);
   }
 
+  /// Static casting C-style default receiver B callback for C++ use
   static void stream_b_callback_static(short *xi, short *xq,
                                        sdrplay_api_StreamCbParamsT *params,
                                        unsigned int numSamples,
@@ -100,6 +88,7 @@ private:
         xi, xq, params, numSamples, reset, cbContext);
   }
 
+  /// Static casting C-style default event callback for C++ use
   static void event_callback_static(sdrplay_api_EventT eventId,
                                     sdrplay_api_TunerSelectT tuner,
                                     sdrplay_api_EventParamsT *params,
@@ -107,6 +96,7 @@ private:
     static_cast<Receiver *>(cbContext)->event_callback(eventId, tuner, params,
                                                        cbContext);
   }
+  /// @}
 };
 
 #endif

@@ -41,8 +41,8 @@ void RadarApp::setup(void) {
   speed_slice.resize(radar_data->n_range);
 
   // Initialise slider values
-  range_slider = 0;
-  speed_slider = 0;
+  range_slice_slider = 0;
+  speed_slice_slider = 0;
 
   // Set ambiguity scales label
   switch (cfg.process_cfg.ambiguity_scale) {
@@ -171,7 +171,6 @@ void RadarApp::run() {
     speed_step = radar_data->speed_step;
     n_speed = radar_data->n_speed;
     range_step = radar_data->range_step;
-    max_allowable_range = cfg.process_cfg.buffer_size * range_step / 2;
 
     // Assign ids for sliders
     std::string lo_str = cfgInterface::loStr_map.at(cfg.receiver_cfg.loType);
@@ -319,46 +318,48 @@ void RadarApp::ambiguity_slice_frame_update(void) {
     for (int i = 0; i < radar_data->ambiguity_columns; i++) {
       range_slice[i] =
           radar_data
-              ->ambiguity[range_slider * radar_data->ambiguity_columns + i];
+              ->ambiguity[range_slice_slider * radar_data->ambiguity_columns +
+                          i];
     }
 
     // Assign range values at speed point
     for (int i = 0; i < radar_data->n_range; i++) {
       speed_slice[i] =
           radar_data->ambiguity[i * radar_data->ambiguity_columns +
-                                speed_slider + radar_data->n_speed];
+                                speed_slice_slider + radar_data->n_speed];
     }
 
     radar_data->ambiguity_mutex.unlock();
   }
 
   // Range slider label
-  std::string label_text = std::format("Range Selection: %.0f [m]",
-                                       range_slider * radar_data->range_step);
+  std::string label_text = std::format(
+      "Range Selection: %.0f [m]", range_slice_slider * radar_data->range_step);
   float text_width = ImGui::CalcTextSize(label_text.c_str()).x;
   ImGui::SetCursorPosX((window_width - text_width) / 4);
   ImGui::Text("Range Selection: %.0f [m]",
-              range_slider * radar_data->range_step);
+              range_slice_slider * radar_data->range_step);
   ImGui::SameLine();
 
   // Speed slider label
   label_text = std::format("Speed Selection: %.1f [m/s]",
-                           range_slider * radar_data->range_step);
+                           range_slice_slider * radar_data->range_step);
   text_width = ImGui::CalcTextSize(label_text.c_str()).x;
   ImGui::SetCursorPosX((window_width - text_width) * 3 / 4);
   ImGui::Text("Speed Selection: %.1f [m/s]",
-              speed_slider * radar_data->speed_step);
+              speed_slice_slider * radar_data->speed_step);
 
   // Range slider
   ImGui::PushItemWidth(half_width);
-  ImGui::SliderInt("##Range ID", &range_slider, 0, radar_data->n_range - 1, "");
+  ImGui::SliderInt("##Range ID", &range_slice_slider, 0,
+                   radar_data->n_range - 1, "");
 
   ImGui::PopItemWidth();
 
   // Speed Slider
   ImGui::SameLine();
   ImGui::PushItemWidth(half_width);
-  ImGui::SliderInt("##Speed ID", &speed_slider, -radar_data->n_speed,
+  ImGui::SliderInt("##Speed ID", &speed_slice_slider, -radar_data->n_speed,
                    radar_data->n_speed, "");
   ImGui::PopItemWidth();
 
@@ -794,5 +795,4 @@ void RadarApp::update_range_vars(void) {
   range_step = PHASE_VELOCITY / cfg.receiver_cfg.fs;
   cfg.process_cfg.max_range =
       range_step * static_cast<int>(cfg.process_cfg.max_range / range_step) + 1;
-  max_allowable_range = cfg.process_cfg.buffer_size * range_step / 2;
 }

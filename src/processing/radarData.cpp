@@ -122,7 +122,7 @@ void RadarData::initialise_fftw_plans(void) {
   }
 }
 
-void RadarData::ambiguity_thread_calc(int row) {
+void RadarData::ambiguity_row_calc(int row) {
   // FFTshift vel id
   int v_id_swap;
 
@@ -289,7 +289,7 @@ void RadarData::radar_process(std::atomic<bool> *exit_flag,
     // Calculate ambiguity
     ambiguity_mutex.lock();
     for (int i = 0; i < n_range; i++) {
-      amb_threads.emplace_back(&RadarData::ambiguity_thread_calc, this, i);
+      amb_threads.emplace_back(&RadarData::ambiguity_row_calc, this, i);
     }
     // Join threads to close
     for (int i = 0; i < n_range; i++) {

@@ -10,109 +10,120 @@
 #include "../hardwareInterface/cfgInterface.h"
 #include "spectrumData.h"
 
-// Wave propagation velocity (I know we aren't in a vacuum)
 // TODO: Make consts class?
+/*
+ * @brief Wave propagation velocity (I know we aren't in a vacuum)
+ */
 const double PHASE_VELOCITY = 3e8;
 
 /*
- * Stores data of both streams required for RADAR processing
+ * @brief Stores data of both streams required for RADAR processing
  */
 class RadarData {
 public:
-  // Mutex
-  std::mutex ambiguity_mutex;
-
-  // RSPDuo stream A
-  SpecData *stream_a_data;
-
-  // RSPDuo stream B
-  SpecData *stream_b_data;
-
-  // Range step in m
-  double range_step;
-
-  // Number of speed points
-  int n_speed;
-
-  // maximum measurable speed
-  double max_speed;
-
-  // Range & speed values
-  std::vector<double> range_vals;
-  std::vector<double> speed_vals;
-
-  // Speed step in m/s
-  double speed_step;
-
-  // Number of range points
-  int n_range;
-
-  // ambiguity surface
-  std::vector<double> ambiguity;
-
-  // detection array
-  std::vector<int> detection;
-
   /*
-   * Constructor for RadarData class
+   * @brief  Constructor for RadarData class
    *
+   * @param cfg Config struct containing required settings
    * @param stream_a_data Pointer to SpecData object for stream A
    * @param stream_B_data Pointer to SpecData object for stream B
    */
   RadarData(Config cfg, SpecData *stream_a_data, SpecData *stream_b_data);
 
   /*
-   * Calculates ambiguity surface between receivers.
+   * @brief Calculates cross-ambiguity surface between receivers.
    */
   void radar_process(std::atomic<bool> *exit_flag, std::mutex *fftw_plan_mutex);
 
-  // number of columns in ambiguity surface
+  /// Object mutex
+  std::mutex ambiguity_mutex;
+
+  /// Vector containing all range values ambiguity is calculated for
+  std::vector<double> range_vals;
+
+  /// Vector containing all speed values ambiguity is calculated for
+  std::vector<double> speed_vals;
+
+  /// flattened array of 2D ambiguity surface
+  std::vector<double> ambiguity;
+
+  /// flattened array of 2D detection surface
+  std::vector<int> detection;
+
+  /// Receiver A data
+  SpecData *stream_a_data;
+
+  /// Receiver B data
+  SpecData *stream_b_data;
+
+  /// range step resolution in metres
+  double range_step;
+
+  /// Maximum speed to be calculated
+  double max_speed;
+
+  /// speed step resolution in metres per second
+  double speed_step;
+
+  /// Number of range points
+  int n_range;
+
+  /// Number of speed points either side of 0 speed
+  int n_speed;
+
+  /// number of speed columns in ambiguity surface
   int ambiguity_columns;
 
-  // Flag denoting when processing data is ready to be accessed
-  std::atomic<bool> ready_flag;
+  std::atomic<bool>
+      ready_flag; /// Flag denoting when processing data is ready to be accessed
 
 private:
-  // Copied data samples
-  int sample_buffer_size;
-  fftw_complex *data_a_copy;
-  fftw_complex *data_b_copy;
-  std::vector<fftw_complex *> delay_lag_product;
-  int delay_lag_length;
-
-  // CFAR functions
+  /**
+   * @brief Cell averaged CFAR processing
+   */
   void CA_CFAR();
+
+  /*
+   * @brief thread safe FFTW plan creation
+   */
+  void initialise_fftw_plans(void);
+
+  /*
+   * @brief Calculates ambiguity surface over single range row
+   */
+  void ambiguity_row_calc(int row);
 
   // Detection config
   DetectionConfig detection_config;
 
-  // Set up fftw plans
-  void initialise_fftw_plans(void);
+  /// Vector to signals of various time delay products
+  std::vector<fftw_complex *> delay_lag_product;
 
-  // Scaling for ambiguity calculation
-  DisplayScale ambiguity_scale;
-
-  // sample frequency
-  unsigned int sample_frequency;
-
-  /*
-   * Calculates ambiguity surface over narrowed region.
-   */
-  void ambiguity_thread_calc(int row);
-
-  /*
-   * FFTW3 plans for ambiguity calculation
-   */
-  std::vector<fftw_plan> fftw_amb_plans;
-
-  /*
-   * Result arrays for output of fftw3 ambiguity calculation
-   */
+  /// Result array for each row of FFTW ambiguity calculation
   std::vector<fftw_complex *> fftw_amb_out;
 
-  /*
-   * twiddle factors for pruned fft results
-   */
+  /// Vector of FFTW plans for each row of ambiguity calculation
+  std::vector<fftw_plan> fftw_amb_plans;
+
+  /// Copy of Receiver A buffer in fftw_complex type
+  fftw_complex *data_a_copy;
+
+  /// Copy of Receiver B buffer in fftw_complex type
+  fftw_complex *data_b_copy;
+
+  /// twiddle factors for pruned fft results
   fftw_complex *twiddle_factors;
+
+  /// Length of sample buffer
+  int sample_buffer_size;
+
+  /// Number of points used for cross-correlations in ambiguity calculation
+  int delay_lag_length;
+
+  /// Real sample frequency with decimation applied
+  unsigned int sample_frequency;
+
+  /// Scaling for ambiguity calculation
+  DisplayScale ambiguity_scale;
 };
 #endif

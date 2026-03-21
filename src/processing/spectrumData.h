@@ -10,42 +10,31 @@
 #include "../hardwareInterface/receiverIq.h"
 
 /*
- * Stores spectrum data
+ * @brief Stores ones receivers IQ data and processes spectra
  */
 class SpecData {
 public:
-  // maximum number of samples stored by object
-  unsigned int buffer_size;
-
-  // Raw IQ data
-  ReceiverRawIQ *spectrum_iq;
-  ReceiverRawIQ *ambiguity_iq;
-
-  // Spectrum vector
-  std::vector<double> spectrum;
-
-  // Frequency vector [MHz]
-  std::vector<double> frequency;
-
-  /*
-   * constructor
+  /**
+   * @brief constructor
    *
    * @param cfg Config struct containing data required to set SpecData
    * parameters
    */
   SpecData(Config cfg);
 
-  /*
-   * Processing function loop.
+  /**
+   * @brief Processing function loop.
    *
    * @param exit_flag Pointer to atomic<bool> flag denoting user request to end
    * program.
+   * @param fftw_plan_mutex Pointer to std::mutex ensuring thread safety when
+   * generating new FFTW plan
    */
   void process_spectrum(std::atomic<bool> *exit_flag,
                         std::mutex *fftw_plan_mutex);
 
-  /*
-   * Updates sample buffer with most recent samples from USB packet
+  /**
+   * @brief Updates sample buffer with most recent samples from USB packet
    *
    * @param *xi I/real sample buffer from RSPDuo
    * @param *xq Q/imaginaryv sample buffer from RSPDuo
@@ -53,32 +42,48 @@ public:
    */
   void update_data(short *xi, short *xq, unsigned int numSamples);
 
-  // Mutex
+  /// Object mutex
   std::mutex mutex_lock;
 
-  // Flag denoting when processing data is ready to be accessed
+  /// Spectrum vector
+  std::vector<double> spectrum;
+
+  /// Frequency vector in MHz
+  std::vector<double> frequency;
+
+  /// Raw IQ data sent to spectrum calculation
+  ReceiverRawIQ *spectrum_iq;
+
+  /// Raw IQ data sent to ambiguity calculation
+  ReceiverRawIQ *ambiguity_iq;
+
+  /// Maximum number of samples stored by object
+  unsigned int buffer_size;
+
+  /// Flag denoting when processing data is ready to be accessed
   std::atomic<bool> ready_flag;
 
 private:
+  /**
+   * @brief Calcualtes complex DFT of current sample set in data_iq
+   */
+  void calc_dft(void);
+
+  /**
+   * @brief set up FFTW plan
+   */
+  void initialise_fftw_plan(void);
+
+  // Windowing vector
+  std::vector<double> dft_window;
+
   // FFTW plan
   fftw_plan fft_plan;
 
   // Samples copied and casted from data_iq field buffers
   fftw_complex *sample_buffer;
 
-  // set up FFTW plan
-  void initialise_fftw_plan(void);
-
-  /*
-   * Calcualtes complex DFT of current sample set in data_iq. Result stored in
-   * spectrum field.
-   */
-  void calc_dft();
-
   // Spectrum buffer to store FFTW3 DFT results
   fftw_complex *spectrum_internal;
-
-  // Windowing vector
-  std::vector<double> dft_window;
 };
 #endif
