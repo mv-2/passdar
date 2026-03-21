@@ -412,10 +412,11 @@ void RadarApp::settings_frame_update(void) {
 
   // Config settings
   ImGuiTableFlags table_flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
-  if (ImGui::BeginTable("Settings", 2, table_flags)) {
+  if (ImGui::BeginTable("Settings", 3, table_flags)) {
 
     ImGui::TableSetupColumn("Receiver");
     ImGui::TableSetupColumn("Processing");
+    ImGui::TableSetupColumn("Detection");
     ImGui::TableHeadersRow();
 
     // Row 1
@@ -435,6 +436,11 @@ void RadarApp::settings_frame_update(void) {
     if (ImGui::IsItemDeactivatedAfterEdit()) {
       update_speed_vars();
     }
+
+    // CFAR multiplier
+    ImGui::TableNextColumn();
+    ImGui::InputDouble("CFAR Multiplier", &cfg.detection_config.cfar_multiplier,
+                       0.05, 0.1, "%.3f");
 
     // Row 2
     // Sample frequency
@@ -465,6 +471,18 @@ void RadarApp::settings_frame_update(void) {
       }
     }
 
+    // Range window size
+    ImGui::TableNextColumn();
+    ImGui::InputInt("Range Window Size", &cfg.detection_config.range_window, 1,
+                    1);
+    if (ImGui::IsItemDeactivatedAfterEdit()) {
+      cfg.detection_config.range_window =
+          std::max(cfg.detection_config.range_window, 1);
+      cfg.detection_config.range_guard =
+          std::min(cfg.detection_config.range_guard,
+                   cfg.detection_config.range_window - 1);
+    }
+
     // Row 3
     // agc_bandwidth_nr
     ImGui::TableNextRow();
@@ -485,6 +503,16 @@ void RadarApp::settings_frame_update(void) {
       update_range_vars();
     }
 
+    // Range guard cells
+    ImGui::TableNextColumn();
+    ImGui::InputInt("Range Guard Size", &cfg.detection_config.range_guard, 1,
+                    1);
+    if (ImGui::IsItemDeactivatedAfterEdit()) {
+      cfg.detection_config.range_guard =
+          std::clamp(cfg.detection_config.range_guard, 0,
+                     cfg.detection_config.range_window - 1);
+    }
+
     // Row 4
     // agc_set_point_nr
     ImGui::TableNextRow();
@@ -496,6 +524,18 @@ void RadarApp::settings_frame_update(void) {
     ImGui::TableNextColumn();
     ImGui::InputDouble("Range Step [m]", &range_step, 1, 1, "%.1f",
                        ImGuiInputTextFlags_ReadOnly);
+
+    // Speed window size
+    ImGui::TableNextColumn();
+    ImGui::InputInt("Speed Window Size", &cfg.detection_config.speed_window, 1,
+                    1);
+    if (ImGui::IsItemDeactivatedAfterEdit()) {
+      cfg.detection_config.speed_window =
+          std::max(cfg.detection_config.speed_window, 1);
+      cfg.detection_config.speed_guard =
+          std::min(cfg.detection_config.speed_guard,
+                   cfg.detection_config.speed_window - 1);
+    }
 
     // Row 5
     // Gain reduction receiver A
@@ -509,6 +549,16 @@ void RadarApp::settings_frame_update(void) {
     if (ImGui::InputDouble("Maximum Speed [m/s]", &cfg.process_cfg.max_speed,
                            1.0, 10.0)) {
       update_speed_vars();
+    }
+
+    // Speed Guard Cells
+    ImGui::TableNextColumn();
+    ImGui::InputInt("Speed Guard Size", &cfg.detection_config.speed_guard, 1,
+                    1);
+    if (ImGui::IsItemDeactivatedAfterEdit()) {
+      cfg.detection_config.speed_guard =
+          std::clamp(cfg.detection_config.speed_guard, 0,
+                     cfg.detection_config.speed_window - 1);
     }
 
     // Row 6
@@ -593,8 +643,8 @@ void RadarApp::settings_frame_update(void) {
       cfg.receiver_cfg.bwType = cfgInterface::bwType_map.at(bw_vals[bw_id]);
     }
     ImGui::SameLine();
-    ImGui::Text("Receiver Bandwidth: %.3f kHz",
-                static_cast<double>(bw_vals[bw_id]));
+    ImGui::Text("Receiver Bandwidth: %.3f MHz",
+                static_cast<double>(bw_vals[bw_id]) / 1000);
 
     // Row 11
     // LO type
