@@ -10,7 +10,7 @@
 #include "../hardwareInterface/cfgInterface.h"
 #include "radarData.h"
 
-// constant file location to store FFTW wisdom files
+// constant file location to store FFTW wisdom file
 const std::string AMBIGUITY_WISDOM_FILE = "cfg/ambiguity.wisdom";
 
 RadarData::RadarData(Config cfg, SpecData *_stream_a_data,
@@ -141,7 +141,7 @@ void RadarData::ambiguity_row_calc(int row) {
   fftw_amb_out[row][0][0] += fftw_amb_out[row][sample_buffer_size - n_speed][0];
   fftw_amb_out[row][0][1] += fftw_amb_out[row][sample_buffer_size - n_speed][1];
 
-  // TODO: try cascade summation to fix accuracy issues
+  // Apply twiddle factors and adjustments for pruned FFT
   for (int i = 1; i < n_speed; i++) {
     // Adjustment values
     amb_adj0[0] = fftw_amb_out[row][i][0];
@@ -173,6 +173,8 @@ void RadarData::ambiguity_row_calc(int row) {
             twiddle_factors[(sample_buffer_size / n_speed - 2) * (n_speed - 1) +
                             (n_speed - i - 1)][1];
   }
+
+  // Sum FFTs
   for (int j = 1; j < (sample_buffer_size / n_speed - 1); j++) {
     fftw_amb_out[row][0][0] += fftw_amb_out[row][j * n_speed][0];
     fftw_amb_out[row][0][1] += fftw_amb_out[row][j * n_speed][1];
@@ -198,6 +200,7 @@ void RadarData::ambiguity_row_calc(int row) {
   }
 
   // Positive frequency assignment
+  // TEST: Should the DisplayScale only be calculated at rendering?
   switch (ambiguity_scale) {
   case DisplayScale::Linear:
     for (int v_id = 0; v_id < n_speed; v_id++) {
@@ -300,6 +303,7 @@ void RadarData::radar_process(std::atomic<bool> *exit_flag,
     // CFAR processing
     CA_CFAR();
 
+    // Unlock mutex
     ambiguity_mutex.unlock();
 
     // Ready after first loop

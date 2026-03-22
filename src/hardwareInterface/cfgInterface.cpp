@@ -6,6 +6,7 @@
 
 #include "cfgInterface.h"
 
+// Template function to generate symmetrical unordered_map objects
 template <typename T1, typename T2>
 constexpr std::unordered_map<T2, T1>
 reverse_map(std::unordered_map<T1, T2> fwd_map) {
@@ -62,6 +63,7 @@ nlohmann::json cfgInterface::load_config(std::string cfg_path) {
 }
 
 DetectionConfig::DetectionConfig(nlohmann::json json_det) {
+  // Assign fields based on json object
   cfar_multiplier = json_det["cfar_multiplier"];
   range_window = json_det["range_window"];
   range_guard = json_det["range_guard"];
@@ -70,14 +72,16 @@ DetectionConfig::DetectionConfig(nlohmann::json json_det) {
 }
 
 DetectionConfig::DetectionConfig() {
+  // Assign defaults
   cfar_multiplier = 1.3;
-  range_window = 0;
+  range_window = 1;
   range_guard = 0;
-  speed_window = 0;
+  speed_window = 1;
   speed_guard = 0;
 }
 
 ReceiverConfig::ReceiverConfig(nlohmann::json json_rcv) {
+  // Assign fields based on json object
   dec_factor = json_rcv["dec_factor"];
   fc = json_rcv["fc"];
   fs = SAMPLE_FREQUENCY_DEFAULT / dec_factor;
@@ -94,6 +98,7 @@ ReceiverConfig::ReceiverConfig(nlohmann::json json_rcv) {
 }
 
 ReceiverConfig::ReceiverConfig() {
+  // Assign defaults
   fc = 100000000;
   fs = SAMPLE_FREQUENCY_DEFAULT;
   agc_bandwidth_nr = 0;
@@ -110,6 +115,7 @@ ReceiverConfig::ReceiverConfig() {
 }
 
 ProcessConfig::ProcessConfig(nlohmann::json json_prcs) {
+  // Assign fields based on json object
   buffer_size = json_prcs["buffer_size"];
   max_range = json_prcs["max_range"];
   max_speed = json_prcs["max_speed"];
@@ -121,6 +127,7 @@ ProcessConfig::ProcessConfig(nlohmann::json json_prcs) {
 }
 
 ProcessConfig::ProcessConfig() {
+  // Assign defaults
   buffer_size = 262140;
   max_range = 50000;
   max_speed = 350;
@@ -130,13 +137,17 @@ ProcessConfig::ProcessConfig() {
 
 Config::Config(std::string cfg_path)
     : receiver_cfg(), process_cfg(), detection_config() {
+  // Read in config file to json object
   nlohmann::json json_cfg = cfgInterface::load_config(cfg_path);
+
+  // Construct sub configs from fields of json object
   receiver_cfg = ReceiverConfig(json_cfg["receiver"]);
   process_cfg = ProcessConfig(json_cfg["processing"]);
   detection_config = DetectionConfig(json_cfg["detection"]);
 }
 
 Config::Config() : receiver_cfg(), process_cfg(), detection_config() {
+  // Default constructor assignment
   receiver_cfg = ReceiverConfig();
   process_cfg = ProcessConfig();
   detection_config = DetectionConfig();

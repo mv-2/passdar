@@ -58,30 +58,28 @@ void RadarApp::setup(void) {
 }
 
 void spinner(float radius, ImVec2 pos) {
-  // Spinner util function
+  // ImGui spinner for initialisation
 
+  // Set size and drawing canvas
   ImVec2 size = ImVec2(radius * 2, radius * 2);
-
   ImGui::Dummy(size);
-
   ImDrawList *DrawList = ImGui::GetWindowDrawList();
   DrawList->PathClear();
 
+  // Draw
   int num_segments = 30;
   float start = fabsf(sinf(ImGui::GetTime() * 1.8f) * (num_segments - 5));
-
   float a_min = M_PI * 2.0f * start / num_segments;
   float a_max = M_PI * 2.0f * (num_segments - 3) / num_segments;
-
   for (int i = 0; i <= num_segments; i++) {
     float a = a_min + (i / (float)num_segments) * (a_max - a_min);
     DrawList->PathLineTo(
         ImVec2(pos.x + cosf(a + ImGui::GetTime() * 8) * radius,
                pos.y + sinf(a + ImGui::GetTime() * 8) * radius));
   }
-
   DrawList->PathStroke(IM_COL32(255, 255, 255, 255), false, 5);
 
+  // Centred text
   ImVec2 text_size = ImGui::CalcTextSize("Initialising");
   ImGui::SetCursorPos({pos.x - text_size.x / 2, pos.y - text_size.y / 2});
   ImGui::Text("Initialising");
@@ -710,6 +708,7 @@ void RadarApp::detection_frame_update(void) {
 
 void RadarApp::update_window(GLFWwindow *window, bool *show_window) {
 
+  // Event polling
   glfwPollEvents();
 
   // ImGui Frame
@@ -782,17 +781,29 @@ void RadarApp::update_window(GLFWwindow *window, bool *show_window) {
 }
 
 void RadarApp::update_speed_vars(void) {
+  // Ensure buffer_size is divisible by n_speed
   cfg.process_cfg.buffer_size -= cfg.process_cfg.buffer_size % n_speed;
+
+  // Ensure speed steps are consistent with buffer size and sample rate
   double df =
       static_cast<double>(cfg.receiver_cfg.fs) / cfg.process_cfg.buffer_size;
   speed_step = df * PHASE_VELOCITY / (2 * cfg.receiver_cfg.fc);
+
+  // Set number of speed steps
   n_speed = cfg.process_cfg.max_speed / speed_step;
-  cfg.process_cfg.buffer_size +=
-      (n_speed - cfg.process_cfg.buffer_size % n_speed);
+
+  // Set exact max_speed
+  cfg.process_cfg.max_speed = n_speed * speed_step;
+
+  // Ensure buffer_size is still consistent with n_speed
+  cfg.process_cfg.buffer_size -= cfg.process_cfg.buffer_size % n_speed;
 }
 
 void RadarApp::update_range_vars(void) {
+  // Ensure range_step is consistent with sample rate
   range_step = PHASE_VELOCITY / cfg.receiver_cfg.fs;
+
+  // Ensure max_range is consistent with range_stepping values
   cfg.process_cfg.max_range =
       range_step * static_cast<int>(cfg.process_cfg.max_range / range_step) + 1;
 }
