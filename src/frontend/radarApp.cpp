@@ -424,8 +424,13 @@ void RadarApp::settings_frame_update(void) {
     ImGui::TableNextColumn();
     if (ImGui::InputInt("Centre Frequency [Hz]", &cfg.receiver_cfg.fc, 100000,
                         100000)) {
-      update_speed_vars();
-      update_range_vars();
+      // Ensure speed steps are consistent with buffer size and sample rate
+      speed_step = (static_cast<double>(cfg.receiver_cfg.fs) /
+                    cfg.process_cfg.buffer_size) *
+                   PHASE_VELOCITY / (2 * cfg.receiver_cfg.fc);
+
+      // Set exact max_speed
+      cfg.process_cfg.max_speed = n_speed * speed_step;
     }
 
     // Buffer size
@@ -433,7 +438,16 @@ void RadarApp::settings_frame_update(void) {
     ImGui::InputInt("Sample Buffer Length", &cfg.process_cfg.buffer_size, 1,
                     1000);
     if (ImGui::IsItemDeactivatedAfterEdit()) {
-      update_speed_vars();
+      // Ensure buffer is divisible by n_speed
+      cfg.process_cfg.buffer_size -= cfg.process_cfg.buffer_size % n_speed;
+
+      // Ensure speed steps are consistent with buffer size and sample rate
+      speed_step = (static_cast<double>(cfg.receiver_cfg.fs) /
+                    cfg.process_cfg.buffer_size) *
+                   PHASE_VELOCITY / (2 * cfg.receiver_cfg.fc);
+
+      // Set exact max_speed
+      cfg.process_cfg.max_speed = n_speed * speed_step;
     }
 
     // CFAR multiplier
@@ -447,8 +461,19 @@ void RadarApp::settings_frame_update(void) {
     ImGui::TableNextColumn();
     if (ImGui::InputInt("Sample Frequency [Hz]", &cfg.receiver_cfg.fs, 1, 1,
                         ImGuiInputTextFlags_ReadOnly)) {
-      update_speed_vars();
+      // Ensure range variables are consistent
       update_range_vars();
+
+      // Ensure speed steps are consistent with buffer size and sample rate
+      speed_step = (static_cast<double>(cfg.receiver_cfg.fs) /
+                    cfg.process_cfg.buffer_size) *
+                   PHASE_VELOCITY / (2 * cfg.receiver_cfg.fc);
+
+      // Set number of speed steps
+      n_speed = cfg.process_cfg.max_speed / speed_step;
+
+      // Set exact max_speed
+      cfg.process_cfg.max_speed = n_speed * speed_step;
     }
 
     // DFT Window
@@ -499,6 +524,7 @@ void RadarApp::settings_frame_update(void) {
     ImGui::InputDouble("Maximum range [m]", &cfg.process_cfg.max_range, 500.0,
                        1000.0);
     if (ImGui::IsItemDeactivatedAfterEdit()) {
+      // Ensure range variables are consistent
       update_range_vars();
     }
 
@@ -545,9 +571,18 @@ void RadarApp::settings_frame_update(void) {
 
     // Max speed
     ImGui::TableNextColumn();
-    if (ImGui::InputDouble("Maximum Speed [m/s]", &cfg.process_cfg.max_speed,
-                           1.0, 10.0)) {
-      update_speed_vars();
+    ImGui::InputDouble("Maximum Speed [m/s]", &cfg.process_cfg.max_speed, 1.0,
+                       10.0);
+    if (ImGui::IsItemDeactivatedAfterEdit()) {
+      // Set number of speed steps
+      n_speed = cfg.process_cfg.max_speed / speed_step;
+
+      // Set exact max_speed
+      cfg.process_cfg.max_speed = n_speed * speed_step;
+
+      // Ensure buffer_size is still consistent with n_speed
+      cfg.process_cfg.buffer_size =
+          n_speed * std::round(cfg.process_cfg.buffer_size / n_speed);
     }
 
     // Speed Guard Cells
@@ -605,20 +640,27 @@ void RadarApp::settings_frame_update(void) {
           std::clamp(cfg.receiver_cfg.dec_factor, 1, 20);
       cfg.receiver_cfg.fs =
           SAMPLE_FREQUENCY_DEFAULT / cfg.receiver_cfg.dec_factor;
-      update_speed_vars();
+      // Ensure Range variables are consistent
       update_range_vars();
+
+      // Ensure speed steps are consistent with buffer size and sample rate
+      speed_step = (static_cast<double>(cfg.receiver_cfg.fs) /
+                    cfg.process_cfg.buffer_size) *
+                   PHASE_VELOCITY / (2 * cfg.receiver_cfg.fc);
+
+      // Set number of speed steps
+      n_speed = cfg.process_cfg.max_speed / speed_step;
+
+      // Set exact max_speed
+      cfg.process_cfg.max_speed = n_speed * speed_step;
+
+      // Ensure buffer_size is still consistent with n_speed
+      cfg.process_cfg.buffer_size -= cfg.process_cfg.buffer_size % n_speed;
     }
 
-    // Ambiguity scale limits
+    // Ambiguity scale min
     ImGui::TableNextColumn();
-    double widths = ImGui::GetContentRegionAvail().x / 4 -
-                    ImGui::CalcTextSize("Ambiguity Minimum").x;
-    ImGui::SetNextItemWidth(widths);
     ImGui::InputDouble("Ambiguity Minimum", &cfg.process_cfg.ambiguity_lims[0],
-                       1, 100, "%.1f");
-    ImGui::SameLine();
-    ImGui::SetNextItemWidth(widths);
-    ImGui::InputDouble("Ambiguity Maximum", &cfg.process_cfg.ambiguity_lims[1],
                        1, 100, "%.1f");
 
     // Row 9
@@ -632,6 +674,11 @@ void RadarApp::settings_frame_update(void) {
     ImGui::SameLine();
     ImGui::Text("IF Bandwidth: %.3f kHz",
                 static_cast<double>(if_vals[IF_id]) / 1000);
+
+    // Ambiguity Scale Max
+    ImGui::TableNextColumn();
+    ImGui::InputDouble("Ambiguity Maximum", &cfg.process_cfg.ambiguity_lims[1],
+                       1, 100, "%.1f");
 
     // Row 10
     // BW type
@@ -778,25 +825,6 @@ void RadarApp::update_window(GLFWwindow *window, bool *show_window) {
   glClear(GL_COLOR_BUFFER_BIT);
   ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
   glfwSwapBuffers(window);
-}
-
-void RadarApp::update_speed_vars(void) {
-  // Ensure buffer_size is divisible by n_speed
-  cfg.process_cfg.buffer_size -= cfg.process_cfg.buffer_size % n_speed;
-
-  // Ensure speed steps are consistent with buffer size and sample rate
-  double df =
-      static_cast<double>(cfg.receiver_cfg.fs) / cfg.process_cfg.buffer_size;
-  speed_step = df * PHASE_VELOCITY / (2 * cfg.receiver_cfg.fc);
-
-  // Set number of speed steps
-  n_speed = cfg.process_cfg.max_speed / speed_step;
-
-  // Set exact max_speed
-  cfg.process_cfg.max_speed = n_speed * speed_step;
-
-  // Ensure buffer_size is still consistent with n_speed
-  cfg.process_cfg.buffer_size -= cfg.process_cfg.buffer_size % n_speed;
 }
 
 void RadarApp::update_range_vars(void) {
