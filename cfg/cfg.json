@@ -20,7 +20,8 @@
     "dft_window": "Rectangular",
     "ambiguity_scale": "dB",
     "ambiguity_min": 1e2,
-    "ambiguity_max": 140
+    "ambiguity_max": 140,
+    "ambiguity_fft_type": "Full"
   },
   "detection": {
     "cfar_multiplier": 1.2,

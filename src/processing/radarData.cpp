@@ -98,6 +98,9 @@ RadarData::RadarData(Config cfg, SpecData *_stream_a_data,
   // Assign config for CFAR processing
   detection_config = cfg.detection_config;
 
+  // Ambiguity spectrum type
+  amb_type = cfg.process_cfg.amb_fft_type;
+
   // Initialise last time and ambiguity_rate
   last_time = std::chrono::high_resolution_clock::now();
   ambiguity_rate = 0.0f;
@@ -110,14 +113,26 @@ void RadarData::initialise_fftw_plans(void) {
               << std::endl;
   }
 
-  // Make FFTW3 plans
   fftw_amb_plans.reserve(n_range);
-  for (int i = 0; i < n_range; i++) {
-    fftw_plan p = fftw_plan_many_dft(
-        1, &n_speed, sample_buffer_size / n_speed, delay_lag_product[i], NULL,
-        sample_buffer_size / n_speed, 1, fftw_amb_out[i], NULL, 1, n_speed,
-        FFTW_FORWARD, FFTW_PATIENT);
-    fftw_amb_plans.push_back(p);
+  switch (amb_type) {
+  case AmbiguityType::Full:
+    for (int i = 0; i < n_range; i++) {
+      fftw_plan p =
+          fftw_plan_dft_1d(sample_buffer_size, delay_lag_product[i],
+                           fftw_amb_out[i], FFTW_FORWARD, FFTW_PATIENT);
+      fftw_amb_plans.push_back(p);
+    }
+
+    break;
+  case AmbiguityType::Pruned:
+    // Make FFTW3 sub-plans
+    for (int i = 0; i < n_range; i++) {
+      fftw_plan p = fftw_plan_many_dft(
+          1, &n_speed, sample_buffer_size / n_speed, delay_lag_product[i], NULL,
+          sample_buffer_size / n_speed, 1, fftw_amb_out[i], NULL, 1, n_speed,
+          FFTW_FORWARD, FFTW_PATIENT);
+      fftw_amb_plans.push_back(p);
+    }
   }
 
   // Export wisdom
@@ -137,110 +152,158 @@ void RadarData::ambiguity_row_calc(int row) {
   // execute the FFTW business
   fftw_execute(fftw_amb_plans[row]);
 
-  // Apply twiddles and adjustments
-  fftw_complex amb_adj0, amb_adjN;
+  switch (amb_type) {
+  case AmbiguityType::Full:
+    switch (ambiguity_scale) {
+    case DisplayScale::Linear:
+      // Positive frequency assignment
+      for (int v_id = 0; v_id < n_speed; v_id++) {
+        v_id_swap = n_speed + v_id - 1;
+        ambiguity[range_row_id * ambiguity_columns + v_id_swap] =
+            sqrt(fftw_amb_out[row][v_id][0] * fftw_amb_out[row][v_id][0] +
+                 fftw_amb_out[row][v_id][1] * fftw_amb_out[row][v_id][1]);
+      }
 
-  // TODO: Use actual complex operations where possible
+      // Negative frequency assignment
+      v_id_swap = n_speed - 1;
+      for (int v_id = sample_buffer_size - n_speed - 1;
+           v_id < sample_buffer_size; v_id++) {
+        ambiguity[range_row_id * ambiguity_columns + v_id_swap] =
+            sqrt(fftw_amb_out[row][v_id][0] * fftw_amb_out[row][v_id][0] +
+                 fftw_amb_out[row][v_id][1] * fftw_amb_out[row][v_id][1]);
+        v_id_swap--;
+      }
+      break;
+    case DisplayScale::dB:
+      // Positive frequency assignment
+      for (int v_id = 0; v_id < n_speed; v_id++) {
+        v_id_swap = n_speed + v_id - 1;
+        ambiguity[range_row_id * ambiguity_columns + v_id_swap] =
+            10 * log10(fftw_amb_out[row][v_id][0] * fftw_amb_out[row][v_id][0] +
+                       fftw_amb_out[row][v_id][1] * fftw_amb_out[row][v_id][1]);
+      }
 
-  // For FFT mapping N = sample_buffer_size, K = n_speed
-  fftw_amb_out[row][0][0] += fftw_amb_out[row][sample_buffer_size - n_speed][0];
-  fftw_amb_out[row][0][1] += fftw_amb_out[row][sample_buffer_size - n_speed][1];
-
-  // Apply twiddle factors and adjustments for pruned FFT
-  for (int i = 1; i < n_speed; i++) {
-    // Adjustment values
-    amb_adj0[0] = fftw_amb_out[row][i][0];
-    amb_adj0[1] = fftw_amb_out[row][i][1];
-    amb_adjN[0] = fftw_amb_out[row][(sample_buffer_size - n_speed) + i][0];
-    amb_adjN[1] = fftw_amb_out[row][(sample_buffer_size - n_speed) + i][1];
-
-    fftw_amb_out[row][i][0] =
-        amb_adj0[0] +
-        amb_adjN[0] *
-            twiddle_factors[(sample_buffer_size / n_speed - 2) * (n_speed - 1) +
-                            (i - 1)][0];
-    fftw_amb_out[row][i][1] =
-        amb_adj0[1] +
-        amb_adjN[1] *
-            twiddle_factors[(sample_buffer_size / n_speed - 2) * (n_speed - 1) +
-                            (i - 1)][1];
-
-    // NOTE: change of sign for amb_adjN term is intentional for complex
-    // conjugate multiplication
-    fftw_amb_out[row][sample_buffer_size - n_speed + i][0] =
-        amb_adj0[0] +
-        amb_adjN[0] *
-            twiddle_factors[(sample_buffer_size / n_speed - 2) * (n_speed - 1) +
-                            (n_speed - i - 1)][0];
-    fftw_amb_out[row][sample_buffer_size - n_speed + i][1] =
-        amb_adj0[1] -
-        amb_adjN[1] *
-            twiddle_factors[(sample_buffer_size / n_speed - 2) * (n_speed - 1) +
-                            (n_speed - i - 1)][1];
-  }
-
-  // Sum FFTs
-  for (int j = 1; j < (sample_buffer_size / n_speed - 1); j++) {
-    fftw_amb_out[row][0][0] += fftw_amb_out[row][j * n_speed][0];
-    fftw_amb_out[row][0][1] += fftw_amb_out[row][j * n_speed][1];
-
-    for (int i = 1; i < n_speed; i++) {
-      fftw_amb_out[row][i][0] +=
-          fftw_amb_out[row][i + j * n_speed][0] *
-          twiddle_factors[(j - 1) * (n_speed - 1) + (i - 1)][0];
-      fftw_amb_out[row][i][1] +=
-          fftw_amb_out[row][i + j * n_speed][1] *
-          twiddle_factors[(j - 1) * (n_speed - 1) + (i - 1)][1];
-    }
-    for (int i = 1; i < n_speed; i++) {
-      // NOTE: change of sign is intentional for complex conjugate
-      // multiplication
-      fftw_amb_out[row][(sample_buffer_size - n_speed) + i][0] +=
-          fftw_amb_out[row][i + j * n_speed][0] *
-          twiddle_factors[(j - 1) * (n_speed - 1) + (n_speed + i - 1)][0];
-      fftw_amb_out[row][(sample_buffer_size - n_speed) + i][1] -=
-          fftw_amb_out[row][i + j * n_speed][1] *
-          twiddle_factors[(j - 1) * (n_speed - 1) + (n_speed + i - 1)][1];
-    }
-  }
-
-  // Positive frequency assignment
-  // TEST: Should the DisplayScale only be calculated at rendering?
-  switch (ambiguity_scale) {
-  case DisplayScale::Linear:
-    for (int v_id = 0; v_id < n_speed; v_id++) {
-      v_id_swap = n_speed + v_id - 1;
-      ambiguity[range_row_id * ambiguity_columns + v_id_swap] =
-          sqrt(fftw_amb_out[row][v_id][0] * fftw_amb_out[row][v_id][0] +
-               fftw_amb_out[row][v_id][1] * fftw_amb_out[row][v_id][1]);
-    }
-
-    // Negative frequency assignment
-    v_id_swap = 0;
-    for (int v_id = sample_buffer_size - 1; v_id > sample_buffer_size - n_speed;
-         v_id--) {
-      ambiguity[range_row_id * ambiguity_columns + v_id_swap] =
-          sqrt(fftw_amb_out[row][v_id][0] * fftw_amb_out[row][v_id][0] +
-               fftw_amb_out[row][v_id][1] * fftw_amb_out[row][v_id][1]);
-      v_id_swap++;
+      // Negative frequency assignment
+      v_id_swap = 0;
+      for (int v_id = sample_buffer_size - n_speed - 1;
+           v_id < sample_buffer_size; v_id++) {
+        ambiguity[range_row_id * ambiguity_columns + v_id_swap] =
+            10 * log10(fftw_amb_out[row][v_id][0] * fftw_amb_out[row][v_id][0] +
+                       fftw_amb_out[row][v_id][1] * fftw_amb_out[row][v_id][1]);
+        v_id_swap++;
+      }
     }
     break;
-  case DisplayScale::dB:
-    for (int v_id = 0; v_id < n_speed; v_id++) {
-      v_id_swap = n_speed + v_id - 1;
-      ambiguity[range_row_id * ambiguity_columns + v_id_swap] =
-          10 * log10(fftw_amb_out[row][v_id][0] * fftw_amb_out[row][v_id][0] +
-                     fftw_amb_out[row][v_id][1] * fftw_amb_out[row][v_id][1]);
+
+  case AmbiguityType::Pruned:
+
+    // Apply twiddles and adjustments
+    fftw_complex amb_adj0, amb_adjN;
+
+    // TODO: Use actual complex operations where possible
+
+    // For FFT mapping N = sample_buffer_size, K = n_speed
+    fftw_amb_out[row][0][0] +=
+        fftw_amb_out[row][sample_buffer_size - n_speed][0];
+    fftw_amb_out[row][0][1] +=
+        fftw_amb_out[row][sample_buffer_size - n_speed][1];
+
+    // Apply twiddle factors and adjustments for pruned FFT
+    for (int i = 1; i < n_speed; i++) {
+      // Adjustment values
+      amb_adj0[0] = fftw_amb_out[row][i][0];
+      amb_adj0[1] = fftw_amb_out[row][i][1];
+      amb_adjN[0] = fftw_amb_out[row][(sample_buffer_size - n_speed) + i][0];
+      amb_adjN[1] = fftw_amb_out[row][(sample_buffer_size - n_speed) + i][1];
+
+      fftw_amb_out[row][i][0] =
+          amb_adj0[0] +
+          amb_adjN[0] * twiddle_factors[(sample_buffer_size / n_speed - 2) *
+                                            (n_speed - 1) +
+                                        (i - 1)][0];
+      fftw_amb_out[row][i][1] =
+          amb_adj0[1] +
+          amb_adjN[1] * twiddle_factors[(sample_buffer_size / n_speed - 2) *
+                                            (n_speed - 1) +
+                                        (i - 1)][1];
+
+      // NOTE: change of sign for amb_adjN term is intentional for complex
+      // conjugate multiplication
+      fftw_amb_out[row][sample_buffer_size - n_speed + i][0] =
+          amb_adj0[0] +
+          amb_adjN[0] * twiddle_factors[(sample_buffer_size / n_speed - 2) *
+                                            (n_speed - 1) +
+                                        (n_speed - i - 1)][0];
+      fftw_amb_out[row][sample_buffer_size - n_speed + i][1] =
+          amb_adj0[1] -
+          amb_adjN[1] * twiddle_factors[(sample_buffer_size / n_speed - 2) *
+                                            (n_speed - 1) +
+                                        (n_speed - i - 1)][1];
     }
 
-    // Negative frequency assignment
-    v_id_swap = 0;
-    for (int v_id = sample_buffer_size - 1; v_id > sample_buffer_size - n_speed;
-         v_id--) {
-      ambiguity[range_row_id * ambiguity_columns + v_id_swap] =
-          10 * log10(fftw_amb_out[row][v_id][0] * fftw_amb_out[row][v_id][0] +
-                     fftw_amb_out[row][v_id][1] * fftw_amb_out[row][v_id][1]);
-      v_id_swap++;
+    // Sum FFTs
+    for (int j = 1; j < (sample_buffer_size / n_speed - 1); j++) {
+      fftw_amb_out[row][0][0] += fftw_amb_out[row][j * n_speed][0];
+      fftw_amb_out[row][0][1] += fftw_amb_out[row][j * n_speed][1];
+
+      for (int i = 1; i < n_speed; i++) {
+        fftw_amb_out[row][i][0] +=
+            fftw_amb_out[row][i + j * n_speed][0] *
+            twiddle_factors[(j - 1) * (n_speed - 1) + (i - 1)][0];
+        fftw_amb_out[row][i][1] +=
+            fftw_amb_out[row][i + j * n_speed][1] *
+            twiddle_factors[(j - 1) * (n_speed - 1) + (i - 1)][1];
+      }
+      for (int i = 1; i < n_speed; i++) {
+        // NOTE: change of sign is intentional for complex conjugate
+        // multiplication
+        fftw_amb_out[row][(sample_buffer_size - n_speed) + i][0] +=
+            fftw_amb_out[row][i + j * n_speed][0] *
+            twiddle_factors[(j - 1) * (n_speed - 1) + (n_speed + i - 1)][0];
+        fftw_amb_out[row][(sample_buffer_size - n_speed) + i][1] -=
+            fftw_amb_out[row][i + j * n_speed][1] *
+            twiddle_factors[(j - 1) * (n_speed - 1) + (n_speed + i - 1)][1];
+      }
+    }
+
+    switch (ambiguity_scale) {
+    case DisplayScale::Linear:
+      // Positive frequency assignment
+      for (int v_id = 0; v_id < n_speed; v_id++) {
+        v_id_swap = n_speed + v_id - 1;
+        ambiguity[range_row_id * ambiguity_columns + v_id_swap] =
+            sqrt(fftw_amb_out[row][v_id][0] * fftw_amb_out[row][v_id][0] +
+                 fftw_amb_out[row][v_id][1] * fftw_amb_out[row][v_id][1]);
+      }
+
+      // Negative frequency assignment
+      v_id_swap = 0;
+      for (int v_id = sample_buffer_size - 1;
+           v_id > sample_buffer_size - n_speed; v_id--) {
+        ambiguity[range_row_id * ambiguity_columns + v_id_swap] =
+            sqrt(fftw_amb_out[row][v_id][0] * fftw_amb_out[row][v_id][0] +
+                 fftw_amb_out[row][v_id][1] * fftw_amb_out[row][v_id][1]);
+        v_id_swap++;
+      }
+      break;
+    case DisplayScale::dB:
+      // Positive frequency assignment
+      for (int v_id = 0; v_id < n_speed; v_id++) {
+        v_id_swap = n_speed + v_id - 1;
+        ambiguity[range_row_id * ambiguity_columns + v_id_swap] =
+            10 * log10(fftw_amb_out[row][v_id][0] * fftw_amb_out[row][v_id][0] +
+                       fftw_amb_out[row][v_id][1] * fftw_amb_out[row][v_id][1]);
+      }
+
+      // Negative frequency assignment
+      v_id_swap = 0;
+      for (int v_id = sample_buffer_size - 1;
+           v_id > sample_buffer_size - n_speed; v_id--) {
+        ambiguity[range_row_id * ambiguity_columns + v_id_swap] =
+            10 * log10(fftw_amb_out[row][v_id][0] * fftw_amb_out[row][v_id][0] +
+                       fftw_amb_out[row][v_id][1] * fftw_amb_out[row][v_id][1]);
+        v_id_swap++;
+      }
     }
   }
 

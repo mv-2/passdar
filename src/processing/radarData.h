@@ -69,6 +69,9 @@ public:
   /// Number of ambuity surfaces generated per s
   double ambiguity_rate;
 
+  /// Ambiguity spectrum type
+  AmbiguityType amb_type;
+
   /// Number of range points
   int n_range;
 

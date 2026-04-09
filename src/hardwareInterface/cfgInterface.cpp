@@ -53,6 +53,9 @@ const std::unordered_map<std::string, DftWindow> window_map = {
 const std::unordered_map<std::string, DisplayScale> scale_map = {
     {"Linear", DisplayScale::Linear}, {"dB", DisplayScale::dB}};
 
+const std::unordered_map<std::string, AmbiguityType> amb_type_map = {
+    {"Full", AmbiguityType::Full}, {"Pruned", AmbiguityType::Pruned}};
+
 nlohmann::json cfgInterface::load_config(std::string cfg_path) {
   std::ifstream cfg_file(cfg_path);
   if (!cfg_file.is_open()) {
@@ -124,6 +127,7 @@ ProcessConfig::ProcessConfig(nlohmann::json json_prcs) {
   ambiguity_scale = scale_map.at(json_prcs["ambiguity_scale"]);
   ambiguity_lims[0] = json_prcs["ambiguity_min"];
   ambiguity_lims[1] = json_prcs["ambiguity_max"];
+  amb_fft_type = amb_type_map.at(json_prcs["ambiguity_fft_type"]);
 }
 
 ProcessConfig::ProcessConfig() {

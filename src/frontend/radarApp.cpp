@@ -701,6 +701,20 @@ void RadarApp::settings_frame_update(void) {
     ImGui::Text("Receiver Bandwidth: %.3f MHz",
                 static_cast<double>(bw_vals[bw_id]) / 1000);
 
+    // Ambiguity FFT type
+    ImGui::TableNextColumn();
+    if (ImGui::Button(cfg.process_cfg.amb_fft_type == AmbiguityType::Full
+                          ? "Full FFT for Ambiguity"
+                          : "Pruned FFT for Ambiguity")) {
+      switch (cfg.process_cfg.amb_fft_type) {
+      case AmbiguityType::Full:
+        cfg.process_cfg.amb_fft_type = AmbiguityType::Pruned;
+        break;
+      case AmbiguityType::Pruned:
+        cfg.process_cfg.amb_fft_type = AmbiguityType::Full;
+      }
+    }
+
     // Row 11
     // LO type
     ImGui::TableNextRow();

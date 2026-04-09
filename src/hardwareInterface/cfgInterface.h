@@ -16,6 +16,11 @@ enum class DftWindow { Rectangular, Hanning };
  */
 enum class DisplayScale { Linear, dB };
 
+/**
+ * @brief FFT calculation type for ambiguity
+ */
+enum class AmbiguityType { Full, Pruned };
+
 // Default sample frequency constant
 /**
  * @brief Default sample frequency set by SDRplay RSPDuo
@@ -102,7 +107,9 @@ struct ProcessConfig {
   DftWindow dft_window;         /// DFT window (applied to spectra only)
   std::string _win_str;         /// String to parse & display window type
   DisplayScale ambiguity_scale; /// Scale to calculate ambiguity surface
-  double ambiguity_lims[2]; /// [min, max] limits to display ambiguity surface
+  double ambiguity_lims[2];   /// [min, max] limits to display ambiguity surface
+  AmbiguityType amb_fft_type; /// Enum to set use of full or pruned FFT in
+                              /// ambiguity calculation
 
   ProcessConfig(nlohmann::json json_prcs); /// Constructor from Json object
   ProcessConfig();                         /// Default constructor
