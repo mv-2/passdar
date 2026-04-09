@@ -2,6 +2,7 @@
 #define RADARDATA_H
 
 #include <atomic>
+#include <chrono>
 #include <complex.h>
 #include <fftw3.h>
 #include <mutex>
@@ -65,6 +66,9 @@ public:
   /// speed step resolution in metres per second
   double speed_step;
 
+  /// Number of ambuity surfaces generated per s
+  double ambiguity_rate;
+
   /// Number of range points
   int n_range;
 
@@ -113,6 +117,9 @@ private:
 
   /// twiddle factors for pruned fft results
   fftw_complex *twiddle_factors;
+
+  /// Last time
+  std::chrono::time_point<std::chrono::high_resolution_clock> last_time;
 
   /// Length of sample buffer
   int sample_buffer_size;

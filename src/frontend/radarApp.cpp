@@ -216,6 +216,8 @@ void RadarApp::run() {
 }
 
 void RadarApp::receiver_spectra_frame_update(void) {
+  float fps = ImGui::GetIO().Framerate;
+  ImGui::Text("Window FPS  %.1f", fps);
   // Receiver subplots
   if (ImPlot::BeginSubplots("Receiver Spectra", 2, 1, ImVec2(-1, -1),
                             ImPlotSubplotFlags_LinkAllX |
@@ -267,6 +269,9 @@ void RadarApp::receiver_spectra_frame_update(void) {
 }
 
 void RadarApp::range_doppler_frame_update(void) {
+  float fps = ImGui::GetIO().Framerate;
+  ImGui::Text("Window FPS %.1f, Ambiguity FPS %.2f", fps,
+              radar_data->ambiguity_rate);
   int plot_width = ImGui::GetContentRegionAvail().x - COLOURBAR_WIDTH -
                    ImGui::GetStyle().ItemSpacing.x;
   // Set heatmap style
@@ -304,6 +309,8 @@ void RadarApp::range_doppler_frame_update(void) {
 }
 
 void RadarApp::ambiguity_slice_frame_update(void) {
+  float fps = ImGui::GetIO().Framerate;
+  ImGui::Text("Window FPS  %.1f", fps);
   // Get available areas
   int window_width = ImGui::GetContentRegionAvail().x;
   int half_width =
@@ -408,6 +415,8 @@ void RadarApp::ambiguity_slice_frame_update(void) {
 }
 
 void RadarApp::settings_frame_update(void) {
+  float fps = ImGui::GetIO().Framerate;
+  ImGui::Text("Window FPS  %.1f", fps);
 
   // Config settings
   ImGuiTableFlags table_flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
@@ -727,6 +736,8 @@ void RadarApp::settings_frame_update(void) {
 }
 
 void RadarApp::detection_frame_update(void) {
+  float fps = ImGui::GetIO().Framerate;
+  ImGui::Text("Window FPS  %.1f", fps);
   // Set heatmap style
   ImPlot::PushColormap(DETECTION_COLOUR_MAP);
 
@@ -827,7 +838,7 @@ void RadarApp::update_window(GLFWwindow *window, bool *show_window) {
   glfwSwapBuffers(window);
 }
 
-void RadarApp::update_range_vars(void) {
+inline void RadarApp::update_range_vars(void) {
   // Ensure range_step is consistent with sample rate
   range_step = PHASE_VELOCITY / cfg.receiver_cfg.fs;
 

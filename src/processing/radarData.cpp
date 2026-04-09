@@ -15,6 +15,7 @@ const std::string AMBIGUITY_WISDOM_FILE = "cfg/ambiguity.wisdom";
 
 RadarData::RadarData(Config cfg, SpecData *_stream_a_data,
                      SpecData *_stream_b_data) {
+
   // not ready
   ready_flag.store(false);
 
@@ -96,6 +97,10 @@ RadarData::RadarData(Config cfg, SpecData *_stream_a_data,
 
   // Assign config for CFAR processing
   detection_config = cfg.detection_config;
+
+  // Initialise last time and ambiguity_rate
+  last_time = std::chrono::high_resolution_clock::now();
+  ambiguity_rate = 0.0f;
 }
 
 void RadarData::initialise_fftw_plans(void) {
@@ -127,7 +132,7 @@ void RadarData::ambiguity_row_calc(int row) {
   int v_id_swap;
 
   // Range swap
-  int range_row_id = row;
+  int range_row_id = n_range - row - 1;
 
   // execute the FFTW business
   fftw_execute(fftw_amb_plans[row]);
@@ -252,8 +257,19 @@ void RadarData::radar_process(std::atomic<bool> *exit_flag,
   // Initialise processing threads
   std::deque<std::thread> amb_threads;
 
+  // Time point and duration for ambiguity_rate calc
+  std::chrono::time_point<std::chrono::high_resolution_clock> time_now;
+  std::chrono::duration<float, std::milli> duration;
+
   // Loop ambiguity calculation
   while (!exit_flag->load()) {
+    // Determine update rate
+    time_now = std::chrono::high_resolution_clock::now();
+    duration = time_now - last_time;
+    ambiguity_rate =
+        1e3 / std::chrono::duration<float, std::milli>(duration).count();
+    last_time = std::chrono::high_resolution_clock::now();
+
     // await next sample block
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
