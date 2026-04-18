@@ -14,7 +14,8 @@
 const std::string AMBIGUITY_WISDOM_FILE = "cfg/ambiguity.wisdom";
 
 RadarData::RadarData(Config cfg, SpecData *_stream_a_data,
-                     SpecData *_stream_b_data) {
+                     SpecData *_stream_b_data)
+    : ambiguity(), detection() {
 
   // not ready
   ready_flag.store(false);
@@ -51,7 +52,7 @@ RadarData::RadarData(Config cfg, SpecData *_stream_a_data,
   n_range = static_cast<int>(cfg.process_cfg.max_range / range_step) + 1;
 
   // preallocate ambiguity
-  ambiguity.resize(n_range * ambiguity_columns);
+  ambiguity = LeftRight<double>(n_range * ambiguity_columns);
 
   // data copy preallocations
   data_a_copy = fftw_alloc_complex(sample_buffer_size);
@@ -93,7 +94,7 @@ RadarData::RadarData(Config cfg, SpecData *_stream_a_data,
   }
 
   // CFAR detection array preallocation
-  detection.resize(n_range * ambiguity_columns);
+  detection = LeftRight<double>(n_range * ambiguity_columns);
 
   // Assign config for CFAR processing
   detection_config = cfg.detection_config;
@@ -159,18 +160,20 @@ void RadarData::ambiguity_row_calc(int row) {
       // Positive frequency assignment
       for (int v_id = 0; v_id < n_speed; v_id++) {
         v_id_swap = n_speed + v_id - 1;
-        ambiguity[range_row_id * ambiguity_columns + v_id_swap] =
+        ambiguity.write(
             sqrt(fftw_amb_out[row][v_id][0] * fftw_amb_out[row][v_id][0] +
-                 fftw_amb_out[row][v_id][1] * fftw_amb_out[row][v_id][1]);
+                 fftw_amb_out[row][v_id][1] * fftw_amb_out[row][v_id][1]),
+            range_row_id * ambiguity_columns + v_id_swap);
       }
 
       // Negative frequency assignment
       v_id_swap = n_speed - 1;
       for (int v_id = sample_buffer_size - n_speed - 1;
            v_id < sample_buffer_size; v_id++) {
-        ambiguity[range_row_id * ambiguity_columns + v_id_swap] =
+        ambiguity.write(
             sqrt(fftw_amb_out[row][v_id][0] * fftw_amb_out[row][v_id][0] +
-                 fftw_amb_out[row][v_id][1] * fftw_amb_out[row][v_id][1]);
+                 fftw_amb_out[row][v_id][1] * fftw_amb_out[row][v_id][1]),
+            range_row_id * ambiguity_columns + v_id_swap);
         v_id_swap--;
       }
       break;
@@ -178,18 +181,20 @@ void RadarData::ambiguity_row_calc(int row) {
       // Positive frequency assignment
       for (int v_id = 0; v_id < n_speed; v_id++) {
         v_id_swap = n_speed + v_id - 1;
-        ambiguity[range_row_id * ambiguity_columns + v_id_swap] =
+        ambiguity.write(
             10 * log10(fftw_amb_out[row][v_id][0] * fftw_amb_out[row][v_id][0] +
-                       fftw_amb_out[row][v_id][1] * fftw_amb_out[row][v_id][1]);
+                       fftw_amb_out[row][v_id][1] * fftw_amb_out[row][v_id][1]),
+            range_row_id * ambiguity_columns + v_id_swap);
       }
 
       // Negative frequency assignment
       v_id_swap = 0;
       for (int v_id = sample_buffer_size - n_speed - 1;
            v_id < sample_buffer_size; v_id++) {
-        ambiguity[range_row_id * ambiguity_columns + v_id_swap] =
+        ambiguity.write(
             10 * log10(fftw_amb_out[row][v_id][0] * fftw_amb_out[row][v_id][0] +
-                       fftw_amb_out[row][v_id][1] * fftw_amb_out[row][v_id][1]);
+                       fftw_amb_out[row][v_id][1] * fftw_amb_out[row][v_id][1]),
+            range_row_id * ambiguity_columns + v_id_swap);
         v_id_swap++;
       }
     }
@@ -271,18 +276,20 @@ void RadarData::ambiguity_row_calc(int row) {
       // Positive frequency assignment
       for (int v_id = 0; v_id < n_speed; v_id++) {
         v_id_swap = n_speed + v_id - 1;
-        ambiguity[range_row_id * ambiguity_columns + v_id_swap] =
+        ambiguity.write(
             sqrt(fftw_amb_out[row][v_id][0] * fftw_amb_out[row][v_id][0] +
-                 fftw_amb_out[row][v_id][1] * fftw_amb_out[row][v_id][1]);
+                 fftw_amb_out[row][v_id][1] * fftw_amb_out[row][v_id][1]),
+            range_row_id * ambiguity_columns + v_id_swap);
       }
 
       // Negative frequency assignment
       v_id_swap = 0;
       for (int v_id = sample_buffer_size - 1;
            v_id > sample_buffer_size - n_speed; v_id--) {
-        ambiguity[range_row_id * ambiguity_columns + v_id_swap] =
+        ambiguity.write(
             sqrt(fftw_amb_out[row][v_id][0] * fftw_amb_out[row][v_id][0] +
-                 fftw_amb_out[row][v_id][1] * fftw_amb_out[row][v_id][1]);
+                 fftw_amb_out[row][v_id][1] * fftw_amb_out[row][v_id][1]),
+            range_row_id * ambiguity_columns + v_id_swap);
         v_id_swap++;
       }
       break;
@@ -290,23 +297,26 @@ void RadarData::ambiguity_row_calc(int row) {
       // Positive frequency assignment
       for (int v_id = 0; v_id < n_speed; v_id++) {
         v_id_swap = n_speed + v_id - 1;
-        ambiguity[range_row_id * ambiguity_columns + v_id_swap] =
+        ambiguity.write(
             10 * log10(fftw_amb_out[row][v_id][0] * fftw_amb_out[row][v_id][0] +
-                       fftw_amb_out[row][v_id][1] * fftw_amb_out[row][v_id][1]);
+                       fftw_amb_out[row][v_id][1] * fftw_amb_out[row][v_id][1]),
+            range_row_id * ambiguity_columns + v_id_swap);
       }
 
       // Negative frequency assignment
       v_id_swap = 0;
       for (int v_id = sample_buffer_size - 1;
            v_id > sample_buffer_size - n_speed; v_id--) {
-        ambiguity[range_row_id * ambiguity_columns + v_id_swap] =
+        ambiguity.write(
             10 * log10(fftw_amb_out[row][v_id][0] * fftw_amb_out[row][v_id][0] +
-                       fftw_amb_out[row][v_id][1] * fftw_amb_out[row][v_id][1]);
+                       fftw_amb_out[row][v_id][1] * fftw_amb_out[row][v_id][1]),
+            range_row_id * ambiguity_columns + v_id_swap);
         v_id_swap++;
       }
     }
   }
 
+  std::cout << "1\n";
   return;
 }
 
@@ -369,7 +379,6 @@ void RadarData::radar_process(std::atomic<bool> *exit_flag,
     }
 
     // Calculate ambiguity
-    ambiguity_mutex.lock();
     for (int i = 0; i < n_range; i++) {
       amb_threads.emplace_back(&RadarData::ambiguity_row_calc, this, i);
     }
@@ -379,11 +388,11 @@ void RadarData::radar_process(std::atomic<bool> *exit_flag,
       amb_threads.pop_front();
     }
 
+    // Finish writing to ambiguity
+    ambiguity.swap_lr();
+
     // CFAR processing
     CA_CFAR();
-
-    // Unlock mutex
-    ambiguity_mutex.unlock();
 
     // Ready after first loop
     ready_flag.store(true);
@@ -425,12 +434,12 @@ void RadarData::CA_CFAR() {
            r_ave_id < r_id - detection_config.range_guard + 1; r_ave_id++) {
         for (int v_ave_id = v_min;
              v_ave_id < v_id - detection_config.speed_guard + 1; v_ave_id++) {
-          ave_vals += ambiguity[r_ave_id * ambiguity_columns + v_ave_id];
+          ave_vals += ambiguity.read(r_ave_id * ambiguity_columns + v_ave_id);
           n_vals++;
         }
         for (int v_ave_id = v_id + detection_config.speed_guard;
              v_ave_id < v_max; v_ave_id++) {
-          ave_vals += ambiguity[r_ave_id * ambiguity_columns + v_ave_id];
+          ave_vals += ambiguity.read(r_ave_id * ambiguity_columns + v_ave_id);
           n_vals++;
         }
       }
@@ -438,7 +447,7 @@ void RadarData::CA_CFAR() {
       // Add cells in guard region
       for (int r_ave_id = r_min; r_ave_id < r_max; r_ave_id++) {
         for (int v_ave_id = v_min; v_ave_id < v_max; v_ave_id++) {
-          ave_vals += ambiguity[r_ave_id * ambiguity_columns + v_ave_id];
+          ave_vals += ambiguity.read(r_ave_id * ambiguity_columns + v_ave_id);
           n_vals++;
         }
       }
@@ -448,20 +457,21 @@ void RadarData::CA_CFAR() {
            r_ave_id++) {
         for (int v_ave_id = v_min;
              v_ave_id < v_id - detection_config.speed_guard + 1; v_ave_id++) {
-          ave_vals += ambiguity[r_ave_id * ambiguity_columns + v_ave_id];
+          ave_vals += ambiguity.read(r_ave_id * ambiguity_columns + v_ave_id);
           n_vals++;
         }
         for (int v_ave_id = v_id + detection_config.speed_guard;
              v_ave_id < v_max; v_ave_id++) {
-          ave_vals += ambiguity[r_ave_id * ambiguity_columns + v_ave_id];
+          ave_vals += ambiguity.read(r_ave_id * ambiguity_columns + v_ave_id);
           n_vals++;
         }
       }
 
       // Determine if ambiguity breaks threshold
-      detection[r_id * ambiguity_columns + v_id] =
-          ambiguity[r_id * ambiguity_columns + v_id] >=
-          (detection_config.cfar_multiplier * ave_vals / n_vals);
+      detection.write(
+          ambiguity.read(r_id * ambiguity_columns + v_id) >=
+              (detection_config.cfar_multiplier * ave_vals / n_vals),
+          r_id * ambiguity_columns + v_id);
     }
   }
 }

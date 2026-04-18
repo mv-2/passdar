@@ -9,6 +9,7 @@
 #include "../hardwareInterface/cfgInterface.h"
 #include "../hardwareInterface/sdrCapture.h"
 #include "../processing/radarData.h"
+#include "../util/leftRightData.h"
 #include "imgui.h"
 #include "implot.h"
 #include "radarApp.h"
@@ -34,9 +35,6 @@ void RadarApp::setup(void) {
   radar_data = new RadarData(cfg, stream_a_data, stream_b_data);
 
   // Preallocate vectors
-  ambiguity_copy.resize(radar_data->ambiguity_columns * radar_data->n_speed,
-                        0.0);
-  detection_copy.resize(radar_data->ambiguity_columns * radar_data->n_speed, 0);
   range_slice.resize(radar_data->ambiguity_columns);
   speed_slice.resize(radar_data->n_range);
 
@@ -282,18 +280,13 @@ void RadarApp::range_doppler_frame_update(void) {
                         ImPlotFlags_NoLegend)) {
     ImPlot::SetupAxes("Speed [m/s]", "Range [m]");
 
-    // Set ambiguity to latest data if available
-    if (radar_data->ambiguity_mutex.try_lock()) {
-      ambiguity_copy = radar_data->ambiguity;
-      radar_data->ambiguity_mutex.unlock();
-    }
-
     // Plot ambiguity copy
-    ImPlot::PlotHeatmap(
-        "Range - Doppler", ambiguity_copy.data(), radar_data->n_range,
-        radar_data->ambiguity_columns, cfg.process_cfg.ambiguity_lims[0],
-        cfg.process_cfg.ambiguity_lims[1], NULL, {-radar_data->max_speed, 0},
-        {radar_data->max_speed, cfg.process_cfg.max_range});
+    ImPlot::PlotHeatmap("Range - Doppler", radar_data->ambiguity.read().data(),
+                        radar_data->n_range, radar_data->ambiguity_columns,
+                        cfg.process_cfg.ambiguity_lims[0],
+                        cfg.process_cfg.ambiguity_lims[1], NULL,
+                        {-radar_data->max_speed, 0},
+                        {radar_data->max_speed, cfg.process_cfg.max_range});
 
     ImPlot::EndPlot();
   }
@@ -316,25 +309,18 @@ void RadarApp::ambiguity_slice_frame_update(void) {
   int half_width =
       ImGui::GetContentRegionAvail().x / 2 - ImGui::GetStyle().ItemSpacing.x;
 
-  // Reload slices when available
-  if (radar_data->ambiguity_mutex.try_lock()) {
+  // TEST: is this sane
+  // Assign speed values at range point
+  for (int i = 0; i < radar_data->ambiguity_columns; i++) {
+    range_slice[i] = radar_data->ambiguity.read(
+        range_slice_slider * radar_data->ambiguity_columns + i);
+  }
 
-    // Assign speed values at range point
-    for (int i = 0; i < radar_data->ambiguity_columns; i++) {
-      range_slice[i] =
-          radar_data
-              ->ambiguity[range_slice_slider * radar_data->ambiguity_columns +
-                          i];
-    }
-
-    // Assign range values at speed point
-    for (int i = 0; i < radar_data->n_range; i++) {
-      speed_slice[i] =
-          radar_data->ambiguity[i * radar_data->ambiguity_columns +
-                                speed_slice_slider + radar_data->n_speed];
-    }
-
-    radar_data->ambiguity_mutex.unlock();
+  // Assign range values at speed point
+  for (int i = 0; i < radar_data->n_range; i++) {
+    speed_slice[i] =
+        radar_data->ambiguity.read(i * radar_data->ambiguity_columns +
+                                   speed_slice_slider + radar_data->n_speed);
   }
 
   // Range slider label
@@ -759,16 +745,10 @@ void RadarApp::detection_frame_update(void) {
   if (ImPlot::BeginPlot("Detection", ImVec2(-1, -1), ImPlotFlags_NoLegend)) {
     ImPlot::SetupAxes("Speed [m/s]", "Range [m]");
 
-    // Set ambiguity to latest data if available
-    if (radar_data->ambiguity_mutex.try_lock()) {
-      detection_copy = radar_data->detection;
-      radar_data->ambiguity_mutex.unlock();
-    }
-
     // Plot ambiguity copy
-    ImPlot::PlotHeatmap("Detection", detection_copy.data(), radar_data->n_range,
-                        radar_data->ambiguity_columns, 1, 0, NULL,
-                        {-radar_data->max_speed, 0},
+    ImPlot::PlotHeatmap("Detection", radar_data->detection.read().data(),
+                        radar_data->n_range, radar_data->ambiguity_columns, 1,
+                        0, NULL, {-radar_data->max_speed, 0},
                         {radar_data->max_speed, cfg.process_cfg.max_range});
 
     ImPlot::EndPlot();

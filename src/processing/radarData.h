@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include "../hardwareInterface/cfgInterface.h"
+#include "../util/leftRightData.h"
 #include "spectrumData.h"
 
 // TODO: Make consts class?
@@ -36,9 +37,6 @@ public:
    */
   void radar_process(std::atomic<bool> *exit_flag, std::mutex *fftw_plan_mutex);
 
-  /// Object mutex
-  std::mutex ambiguity_mutex;
-
   /// Vector containing all range values ambiguity is calculated for
   std::vector<double> range_vals;
 
@@ -46,10 +44,10 @@ public:
   std::vector<double> speed_vals;
 
   /// flattened array of 2D ambiguity surface
-  std::vector<double> ambiguity;
+  LeftRight<double> ambiguity;
 
   /// flattened array of 2D detection surface
-  std::vector<int> detection;
+  LeftRight<double> detection;
 
   /// Receiver A data
   SpecData *stream_a_data;

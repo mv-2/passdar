@@ -11,6 +11,7 @@ set(SOURCE_DIR src)
 set(HARDWARE_DIR hardwareInterface)
 set(FRONTEND_DIR frontend)
 set(PROCESSING_DIR processing)
+set(UTIL_DIR util)
 set(SOURCES
   ${SOURCE_DIR}/main.cpp
   ${SOURCE_DIR}/${FRONTEND_DIR}/radarApp.cpp
@@ -19,6 +20,7 @@ set(SOURCES
   ${SOURCE_DIR}/${HARDWARE_DIR}/receiverIq.cpp
   ${SOURCE_DIR}/${HARDWARE_DIR}/sdrCapture.cpp
   ${SOURCE_DIR}/${PROCESSING_DIR}/spectrumData.cpp
+  ${SOURCE_DIR}/${UTIL_DIR}/leftRightData.h
 )
 add_executable(passdar ${SOURCES})
 

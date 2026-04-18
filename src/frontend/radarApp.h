@@ -105,14 +105,6 @@ private:
   /// Speed slice data
   std::vector<double> speed_slice;
 
-  /// @name Data copies
-  /// @{
-  std::vector<double>
-      ambiguity_copy; /// Copy of ambiguity data to update heatmap frames
-  std::vector<int>
-      detection_copy; /// Copy of detection data to update detection frames
-  /// @}
-
   /**
    * @brief Ambiguity scale label & units
    * @details Label will denote dB or linear scale accordingly
