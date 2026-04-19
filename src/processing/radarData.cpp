@@ -316,7 +316,6 @@ void RadarData::ambiguity_row_calc(int row) {
     }
   }
 
-  std::cout << "1\n";
   return;
 }
 

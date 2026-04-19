@@ -12,25 +12,22 @@ public:
    * @param data data to instantiate LeftRight datatype
    */
   LeftRight(std::vector<T> data) {
-    // assign data to left and right buffers
-    left = data;
-    right = data;
-    length = data.size();
 
     // Assign initial pointers to buffers
-    read_ptr = &left;
-    write_ptr = &right;
+    length = data.size();
+    read_ptr = new std::vector<T>(length);
+    write_ptr = new std::vector<T>(length);
+    read_ptr->data() = data.data();
+    write_ptr->data() = data.data();
   };
 
   /**
    * @brief Default constructor
    */
   LeftRight(void) {
-    left = std::vector<T>(0);
-    right = std::vector<T>(0);
-    length = 0;
-    read_ptr = &left;
-    write_ptr = &right;
+    length = 1;
+    read_ptr = new std::vector<T>(1);
+    write_ptr = new std::vector<T>(1);
   }
 
   /**
@@ -39,15 +36,10 @@ public:
    * @param size data size
    */
   LeftRight(int size) {
-
-    // assign data to left and right buffers
-    left = std::vector<T>(size);
-    right = std::vector<T>(size);
-    length = size;
-
     // Assign initial pointers to buffers
-    read_ptr = &left;
-    write_ptr = &right;
+    read_ptr = new std::vector<T>(size);
+    write_ptr = new std::vector<T>(size);
+    length = size;
   };
 
   /// read all data from reader buffer
@@ -81,12 +73,6 @@ public:
   void swap_lr(void) { std::swap(read_ptr, write_ptr); };
 
 private:
-  /// Left buffer/data
-  std::vector<T> left;
-
-  /// Right buffer/data
-  std::vector<T> right;
-
   /// Pointer to reader
   std::vector<T> *read_ptr;
 
