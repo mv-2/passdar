@@ -15,18 +15,19 @@ live ambiguity between the incoming signals.
 To clone and build the project while cloning external repositories recursively.
 
 ```bash
-git clone --recurse-submodules https://github.com/mv-2/passdar.git
+git clone https://github.com/mv-2/passdar.git
 cd passdar
-cmesake -B build
-cmake --build build
+vcpkg install
+cmake --preset default
+cmake --build --preset default
 ```
 
 Run by pointing to config file.
 
 ```bash
-./build/passdar cfg/cfg.json
+./build/default/passdar cfg/cfg.json
 ```
 
 On first startup, expect that the window will take a while to show. `FFTW`
 is used to calculate the DFT and ambiguity which requires pre-computing
-multiple `FFTW` plans using the `FFTW_PATIENT` option.
+multiple `FFTW` plans using the `FFTW_EXHAUSTIVE` option.

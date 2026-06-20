@@ -4,13 +4,13 @@
 #include <iostream>
 #include <thread>
 
-#include "../../external/imgui/backends/imgui_impl_glfw.h"
-#include "../../external/imgui/backends/imgui_impl_opengl3.h"
 #include "../hardwareInterface/cfgInterface.h"
 #include "../hardwareInterface/sdrCapture.h"
 #include "../processing/radarData.h"
 #include "../util/leftRightData.h"
 #include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
 #include "implot.h"
 #include "radarApp.h"
 
@@ -75,7 +75,8 @@ void spinner(float radius, ImVec2 pos) {
         ImVec2(pos.x + cosf(a + ImGui::GetTime() * 8) * radius,
                pos.y + sinf(a + ImGui::GetTime() * 8) * radius));
   }
-  DrawList->PathStroke(IM_COL32(255, 255, 255, 255), false, 5);
+
+  DrawList->PathStroke(IM_COL32(255, 255, 255, 255), 1.0, ImDrawListFlags_None);
 
   // Centred text
   ImVec2 text_size = ImGui::CalcTextSize("Initialising");

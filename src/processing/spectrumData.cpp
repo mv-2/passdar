@@ -63,7 +63,7 @@ void SpecData::initialise_fftw_plan(void) {
 
   // Create FFTW plan
   fft_plan = fftw_plan_dft_1d(buffer_size, sample_buffer, spectrum_internal,
-                              FFTW_FORWARD, FFTW_PATIENT);
+                              FFTW_FORWARD, FFTW_ESTIMATE);
 
   // Export wisdom
   if (fftw_export_wisdom_to_filename(SPECTRUM_WISDOM_FILENAME.c_str()) == 0) {

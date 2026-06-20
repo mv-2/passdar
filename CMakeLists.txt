@@ -24,34 +24,30 @@ set(SOURCES
 )
 add_executable(passdar ${SOURCES})
 
-# nlohmann_json
-target_link_libraries(passdar PRIVATE nlohmann_json)
-
-# FFTW
-set(FFTW_ROOT "/usr/local/x86_64-linux-gnu")
-find_path(FFTW_INCLUDE_DIR NAMES fftw3.h PATHS ${FFTW_ROOT}/include)
-find_library(FFTW_LIBRARY NAMES fftw3 PATHS ${FFTW_ROOT}/lib)
-target_include_directories(passdar
-  PRIVATE
-    ${FFTW_INCLUDE_DIR}
-)
-target_link_libraries(passdar PUBLIC ${FFTW_LIBRARY})
-
-# SDRPLAY
 find_path(SDRPLAY_INCLUDE_DIR sdrplay_api.h
-    PATHS /usr/local/include /usr/include
-    NO_CMAKE_FIND_ROOT_PATH
+  PATHS /usr/local/include /usr/include
+  NO_CMAKE_FIND_ROOT_PATH
 )
 find_library(SDRPLAY_LIBRARY NAMES sdrplay_api libsdrplay_api.so
-    PATHS /usr/local/lib /usr/lib
-    NO_CMAKE_FIND_ROOT_PATH
+  PATHS /usr/local/lib /usr.lib
+  NO_CMAKE_FIND_ROOT_PATH
 )
 target_include_directories(passdar
   PRIVATE
     ${SDRPLAY_INCLUDE_DIR}
 )
 target_link_libraries(passdar PUBLIC ${SDRPLAY_LIBRARY})
-
-# Git submodules
-add_subdirectory(external)
-target_link_libraries(passdar PUBLIC imgui_core implot)
+find_package(FFTW3 CONFIG REQUIRED)
+find_package(imgui CONFIG REQUIRED)
+find_package(implot CONFIG REQUIRED)
+find_package(glfw3 CONFIG REQUIRED)
+find_package(OpenGL REQUIRED)
+find_package(nlohmann_json CONFIG REQUIRED)
+target_link_libraries(passdar PRIVATE
+  FFTW3::fftw3
+  imgui::imgui
+  implot::implot
+  OpenGL::GL
+  glfw
+  nlohmann_json::nlohmann_json
+)

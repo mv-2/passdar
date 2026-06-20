@@ -120,18 +120,17 @@ void RadarData::initialise_fftw_plans(void) {
     for (int i = 0; i < n_range; i++) {
       fftw_plan p =
           fftw_plan_dft_1d(sample_buffer_size, delay_lag_product[i],
-                           fftw_amb_out[i], FFTW_FORWARD, FFTW_PATIENT);
+                           fftw_amb_out[i], FFTW_FORWARD, FFTW_EXHAUSTIVE);
       fftw_amb_plans.push_back(p);
     }
 
     break;
   case AmbiguityType::Pruned:
-    // Make FFTW3 sub-plans
     for (int i = 0; i < n_range; i++) {
       fftw_plan p = fftw_plan_many_dft(
           1, &n_speed, sample_buffer_size / n_speed, delay_lag_product[i], NULL,
           sample_buffer_size / n_speed, 1, fftw_amb_out[i], NULL, 1, n_speed,
-          FFTW_FORWARD, FFTW_PATIENT);
+          FFTW_FORWARD, FFTW_EXHAUSTIVE);
       fftw_amb_plans.push_back(p);
     }
   }
