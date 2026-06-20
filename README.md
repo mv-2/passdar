@@ -31,3 +31,7 @@ Run by pointing to config file.
 On first startup, expect that the window will take a while to show. `FFTW`
 is used to calculate the DFT and ambiguity which requires pre-computing
 multiple `FFTW` plans using the `FFTW_EXHAUSTIVE` option.
+
+## Dependencies
+
+To build and run, `vcpkg`, `cmake` and `SDRPlay_API v3.15`. This project has not been tested with any other SDRplay API versions at this point in time.
