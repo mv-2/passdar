@@ -223,20 +223,23 @@ void RadarApp::receiver_spectra_frame_update(void) {
                                 ImPlotSubplotFlags_LinkAllY)) {
     // Receiver A plot
     ImPlot::PushColormap(SPECTRUM_COLOUR_MAP);
+    ImPlotSpec stair_spec;
+    stair_spec.FillAlpha = 0.5f;
+    stair_spec.Flags = ImPlotStairsFlags_Shaded;
     if (ImPlot::BeginPlot("Receiver A", ImVec2(-1, 0), ImPlotFlags_NoLegend)) {
 
       // Setup and labels
       ImPlot::SetupAxes("Frequency [MHz]", "Amplitude [dB]");
       ImPlot::SetupAxisLimits(ImAxis_X1, stream_a_data->frequency.front(),
-                              stream_a_data->frequency.back(),
-                              ImPlotCond_Always);
+                              stream_a_data->frequency.back(), ImPlotCond_Once);
       ImPlot::SetupAxisLimits(ImAxis_Y1, 30, 120, ImPlotCond_Once);
 
       // Plot
       stream_a_data->mutex_lock.lock();
-      ImPlot::PlotLine("Receiver A", stream_a_data->frequency.data(),
-                       stream_a_data->spectrum.data(),
-                       stream_a_data->frequency.size());
+
+      ImPlot::PlotStairs("Receiver A", stream_a_data->frequency.data(),
+                         stream_a_data->spectrum.data(),
+                         stream_a_data->frequency.size(), stair_spec);
       stream_a_data->mutex_lock.unlock();
 
       ImPlot::EndPlot();
@@ -248,15 +251,14 @@ void RadarApp::receiver_spectra_frame_update(void) {
       // Setup and labels
       ImPlot::SetupAxes("Frequency [MHz]", "Amplitude [dB]");
       ImPlot::SetupAxisLimits(ImAxis_X1, stream_b_data->frequency.front(),
-                              stream_b_data->frequency.back(),
-                              ImPlotCond_Always);
+                              stream_b_data->frequency.back(), ImPlotCond_Once);
       ImPlot::SetupAxisLimits(ImAxis_Y1, 30, 120, ImPlotCond_Once);
 
       // Plot
       stream_b_data->mutex_lock.lock();
-      ImPlot::PlotLine("Receiver B", stream_b_data->frequency.data(),
-                       stream_b_data->spectrum.data(),
-                       stream_b_data->frequency.size());
+      ImPlot::PlotStairs("Receiver B", stream_b_data->frequency.data(),
+                         stream_b_data->spectrum.data(),
+                         stream_b_data->frequency.size(), stair_spec);
       stream_b_data->mutex_lock.unlock();
 
       ImPlot::EndPlot();
@@ -357,6 +359,9 @@ void RadarApp::ambiguity_slice_frame_update(void) {
 
   // Slice Subplots
   if (ImPlot::BeginSubplots("Ambiguity Slices", 2, 1, ImVec2(-1, -1))) {
+    ImPlotSpec stair_spec;
+    stair_spec.FillAlpha = 0.5f;
+    stair_spec.Flags = ImPlotStairsFlags_Shaded;
     // Range Slice plot
     ImPlot::PushColormap(SPECTRUM_COLOUR_MAP);
     if (ImPlot::BeginPlot("Range Slice", ImVec2(-1, -1),
@@ -371,8 +376,8 @@ void RadarApp::ambiguity_slice_frame_update(void) {
                               ImGuiCond_Once);
 
       // Plot
-      ImPlot::PlotLine("Range Slice", radar_data->speed_vals.data(),
-                       range_slice.data(), range_slice.size());
+      ImPlot::PlotStairs("Range Slice", radar_data->speed_vals.data(),
+                         range_slice.data(), range_slice.size(), stair_spec);
 
       ImPlot::EndPlot();
     }
@@ -390,8 +395,8 @@ void RadarApp::ambiguity_slice_frame_update(void) {
                               ImGuiCond_Once);
 
       // plot
-      ImPlot::PlotLine("Speed Slice", radar_data->range_vals.data(),
-                       speed_slice.data(), speed_slice.size());
+      ImPlot::PlotStairs("Speed Slice", radar_data->range_vals.data(),
+                         speed_slice.data(), speed_slice.size(), stair_spec);
 
       ImPlot::EndPlot();
     }
