@@ -25,6 +25,14 @@
       }
     },
     {
+      "name": "release-linux",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "inherits": "default",
+      "cacheVariables": {
+        "VCPKG_TARGET_TRIPLET": "x64-linux-release"
+      }
+    },
+    {
       "name": "debug",
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
@@ -37,24 +45,33 @@
   ],
   "buildPresets": [
     {
-      "name": "default-linux",
-      "displayName": "Default optimised build for x64 linux",
-      "configurePreset": "default-linux",
+      "name": "base-build",
       "targets": [
         "passdar"
       ],
+      "jobs": 8,
+      "hidden": true
+    },
+    {
+      "name": "default-linux",
+      "displayName": "Default optimised build for x64 linux",
+      "configurePreset": "default-linux",
       "cleanFirst": false,
-      "jobs": 8
+      "inherits": "base-build"
+    },
+    {
+      "name": "release-linux",
+      "displayName": "Default optimised build for x64 linux",
+      "configurePreset": "release-linux",
+      "cleanFirst": true,
+      "inherits": "base-build"
     },
     {
       "name": "debug",
       "displayName": "Build with debug flags",
       "configurePreset": "debug",
-      "targets": [
-        "passdar"
-      ],
-      "cleanFirst": true,
-      "jobs": 8
+      "cleanFirst": false,
+      "inherits": "base-build"
     }
   ]
 }
