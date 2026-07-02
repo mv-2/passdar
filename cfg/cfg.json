@@ -5,10 +5,10 @@
     "agc_set_point_nr": 0,
     "gRdB_A": 40,
     "gRdB_B": 40,
-    "lna_state": 7,
+    "lna_state": 1,
     "dec_factor": 8,
-    "if_kHz": 2048,
-    "bw_MHz": 8000,
+    "if_kHz": 1620,
+    "bw_MHz": 1536,
     "lo_MHz": "Auto",
     "rf_notch_enable": false,
     "dab_notch_enable": false
