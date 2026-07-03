@@ -5,8 +5,8 @@
     "agc_set_point_nr": 0,
     "gRdB_A": 40,
     "gRdB_B": 40,
-    "lna_state": 1,
-    "dec_factor": 8,
+    "lna_state": 7,
+    "dec_factor": 4,
     "if_kHz": 1620,
     "bw_MHz": 1536,
     "lo_MHz": "Auto",
@@ -14,14 +14,14 @@
     "dab_notch_enable": false
   },
   "processing": {
-    "buffer_size": 523957,
+    "buffer_size": 524288,
     "max_range": 60000,
     "max_speed": 350,
     "dft_window": "Rectangular",
     "ambiguity_scale": "dB",
     "ambiguity_min": 1e2,
     "ambiguity_max": 140,
-    "ambiguity_fft_type": "Pruned"
+    "ambiguity_fft_type": "Full"
   },
   "detection": {
     "cfar_multiplier": 1.2,

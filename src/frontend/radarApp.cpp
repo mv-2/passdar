@@ -439,9 +439,6 @@ void RadarApp::settings_frame_update(void) {
     ImGui::InputInt("Sample Buffer Length", &cfg.process_cfg.buffer_size, 1,
                     1000);
     if (ImGui::IsItemDeactivatedAfterEdit()) {
-      // Ensure buffer is divisible by n_speed
-      cfg.process_cfg.buffer_size -= cfg.process_cfg.buffer_size % n_speed;
-
       // Ensure speed steps are consistent with buffer size and sample rate
       speed_step = (static_cast<double>(cfg.receiver_cfg.fs) /
                     cfg.process_cfg.buffer_size) *
@@ -654,9 +651,6 @@ void RadarApp::settings_frame_update(void) {
 
       // Set exact max_speed
       cfg.process_cfg.max_speed = n_speed * speed_step;
-
-      // Ensure buffer_size is still consistent with n_speed
-      cfg.process_cfg.buffer_size -= cfg.process_cfg.buffer_size % n_speed;
     }
 
     // Ambiguity scale min

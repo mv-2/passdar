@@ -27,7 +27,7 @@ enum class AmbiguityType { Full, Pruned };
  * @details Sample rate is not mutable and may only be changed by decimating
  * data
  */
-const double SAMPLE_FREQUENCY_DEFAULT = 6000000;
+const double SAMPLE_FREQUENCY_DEFAULT = 2000000;
 
 /**
  * @brief Class of static functions and variables for config parsing
