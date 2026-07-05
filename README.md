@@ -18,7 +18,7 @@ To clone and build the project for a linux machine.
 git clone https://github.com/mv-2/passdar.git
 cd passdar
 vcpkg install
-cmake --preset default
+cmake --preset default-linux
 cmake --build --preset default-linux
 ```
 
