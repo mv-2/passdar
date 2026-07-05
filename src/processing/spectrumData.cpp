@@ -29,7 +29,7 @@ SpecData::SpecData(Config cfg) {
   double sample_frequency = static_cast<double>(cfg.receiver_cfg.fs) / 1e6;
   for (int i = -static_cast<int>(buffer_size) / 2;
        i < static_cast<int>(buffer_size) / 2; i++) {
-    frequency.push_back(static_cast<double>(i) * sample_frequency /
+    frequency.push_back((static_cast<double>(i) - 0.5) * sample_frequency /
                             (static_cast<int>(buffer_size)) +
                         static_cast<double>(cfg.receiver_cfg.fc) / 1e6);
   }

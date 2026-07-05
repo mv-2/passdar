@@ -129,9 +129,6 @@ private:
   /// Number of speed points calculated for ambiguity
   int n_speed;
 
-  /// Number of range points calculated for ambiguity
-  int n_range;
-
   // TODO: Link to actual SDRplay structs and enums rather than this
   /// @name Settings slider values
   /// @{

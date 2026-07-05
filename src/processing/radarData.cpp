@@ -87,10 +87,10 @@ RadarData::RadarData(Config cfg, SpecData *_stream_a_data,
   // Calculate range & speed values
   // Calculate range values
   for (int i = 0; i < n_range; i++) {
-    range_vals.push_back(static_cast<double>(i) * range_step);
+    range_vals.push_back(static_cast<double>(i) * range_step - range_step / 2);
   }
   for (int i = -n_speed; i < n_speed; i++) {
-    speed_vals.push_back(static_cast<double>(i) * speed_step);
+    speed_vals.push_back(static_cast<double>(i) * speed_step - speed_step / 2);
   }
 
   // CFAR detection array preallocation
