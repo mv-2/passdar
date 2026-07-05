@@ -12,20 +12,20 @@ live ambiguity between the incoming signals.
 
 ## Build & Run
 
-To clone and build the project while cloning external repositories recursively.
+To clone and build the project for a linux machine.
 
 ```bash
 git clone https://github.com/mv-2/passdar.git
 cd passdar
 vcpkg install
 cmake --preset default
-cmake --build --preset default
+cmake --build --preset default-linux
 ```
 
 Run by pointing to config file.
 
 ```bash
-./build/default/passdar cfg/cfg.json
+./build/default-linux/passdar cfg/cfg.json
 ```
 
 On first startup, expect that the window will take a while to show. `FFTW`

@@ -312,7 +312,6 @@ void RadarApp::ambiguity_slice_frame_update(void) {
   int half_width =
       ImGui::GetContentRegionAvail().x / 2 - ImGui::GetStyle().ItemSpacing.x;
 
-  // FIXME: Wrong way around
   // Assign speed values at range point
   for (int i = 0; i < radar_data->ambiguity_columns; i++) {
     range_slice[i] = radar_data->ambiguity.read(
