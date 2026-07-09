@@ -229,7 +229,8 @@ void RadarApp::receiver_spectra_frame_update(void) {
     if (ImPlot::BeginPlot("Receiver A", ImVec2(-1, 0), ImPlotFlags_NoLegend)) {
 
       // Setup and labels
-      ImPlot::SetupAxes("Frequency [MHz]", "Amplitude [dB]");
+      ImPlot::SetupAxes("Frequency [MHz]", "Amplitude [dB]",
+                        ImPlotAxisFlags_None, ImPlotAxisFlags_Lock);
       ImPlot::SetupAxisLimits(ImAxis_X1, stream_a_data->frequency.front(),
                               stream_a_data->frequency.back(), ImPlotCond_Once);
       ImPlot::SetupAxisLimits(ImAxis_Y1, 30, 120, ImPlotCond_Once);
@@ -249,7 +250,8 @@ void RadarApp::receiver_spectra_frame_update(void) {
     if (ImPlot::BeginPlot("Receiver B", ImVec2(-1, 0), ImPlotFlags_NoLegend)) {
 
       // Setup and labels
-      ImPlot::SetupAxes("Frequency [MHz]", "Amplitude [dB]");
+      ImPlot::SetupAxes("Frequency [MHz]", "Amplitude [dB]",
+                        ImPlotAxisFlags_Lock, ImPlotAxisFlags_None);
       ImPlot::SetupAxisLimits(ImAxis_X1, stream_b_data->frequency.front(),
                               stream_b_data->frequency.back(), ImPlotCond_Once);
       ImPlot::SetupAxisLimits(ImAxis_Y1, 30, 120, ImPlotCond_Once);
@@ -578,10 +580,6 @@ void RadarApp::settings_frame_update(void) {
 
       // Set exact max_speed
       cfg.process_cfg.max_speed = n_speed * speed_step;
-
-      // Ensure buffer_size is still consistent with n_speed
-      cfg.process_cfg.buffer_size =
-          n_speed * std::round(cfg.process_cfg.buffer_size / n_speed);
     }
 
     // Speed Guard Cells
@@ -639,6 +637,7 @@ void RadarApp::settings_frame_update(void) {
           std::clamp(cfg.receiver_cfg.dec_factor, 1, 20);
       cfg.receiver_cfg.fs =
           SAMPLE_FREQUENCY_DEFAULT / cfg.receiver_cfg.dec_factor;
+
       // Ensure Range variables are consistent
       update_range_vars();
 
