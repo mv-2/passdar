@@ -9,6 +9,7 @@
     {
       "name": "base",
       "hidden": true,
+      "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
@@ -24,24 +25,21 @@
       }
     },
     {
-      "name": "default-linux",
-      "binaryDir": "${sourceDir}/build/${presetName}",
+      "name": "linux",
       "inherits": "default",
       "cacheVariables": {
         "VCPKG_TARGET_TRIPLET": "x64-linux-release"
       }
     },
     {
-      "name": "release-linux",
-      "binaryDir": "${sourceDir}/build/${presetName}",
+      "name": "windows",
       "inherits": "default",
       "cacheVariables": {
-        "VCPKG_TARGET_TRIPLET": "x64-linux-release"
+        "VCPKG_TARGET_TRIPLET": "x64-windows-release"
       }
     },
     {
       "name": "debug",
-      "binaryDir": "${sourceDir}/build/${presetName}",
       "inherits": "base"
     }
   ],
@@ -57,14 +55,28 @@
     {
       "name": "default-linux",
       "displayName": "Default optimised build for x64 linux",
-      "configurePreset": "default-linux",
+      "configurePreset": "linux",
       "cleanFirst": false,
       "inherits": "base-build"
     },
     {
       "name": "release-linux",
-      "displayName": "Default optimised build for x64 linux",
-      "configurePreset": "release-linux",
+      "displayName": "Release build for x64 linux",
+      "configurePreset": "linux",
+      "cleanFirst": true,
+      "inherits": "base-build"
+    },
+    {
+      "name": "default-windows",
+      "displayName": "Default optimised build for x64 windows",
+      "configurePreset": "windows",
+      "cleanFirst": false,
+      "inherits": "base-build"
+    },
+    {
+      "name": "release-windows",
+      "displayName": "Release build for x64 windows",
+      "configurePreset": "windows",
       "cleanFirst": true,
       "inherits": "base-build"
     },
