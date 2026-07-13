@@ -18,14 +18,14 @@ To clone and build the project for a linux machine.
 git clone https://github.com/mv-2/passdar.git
 cd passdar
 vcpkg install
-cmake --preset default-linux
+cmake --preset linux
 cmake --build --preset default-linux
 ```
 
 Run by pointing to config file.
 
 ```bash
-./build/default-linux/passdar cfg/cfg.json
+./build/linux/passdar cfg/cfg.json
 ```
 
 On first startup, expect that the window will take a while to show. `FFTW`
