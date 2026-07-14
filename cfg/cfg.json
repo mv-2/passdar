@@ -14,14 +14,14 @@
     "dab_notch_enable": false
   },
   "processing": {
-    "buffer_size": 524288,
+    "buffer_size": 524272,
     "max_range": 60000,
     "max_speed": 350,
     "dft_window": "Rectangular",
     "ambiguity_scale": "dB",
     "ambiguity_min": 1e2,
     "ambiguity_max": 140,
-    "ambiguity_fft_type": "Full"
+    "ambiguity_fft_type": "Pruned"
   },
   "detection": {
     "cfar_multiplier": 1.2,
