@@ -102,22 +102,22 @@ private:
   DetectionConfig detection_config;
 
   /// Vector to signals of various time delay products
-  std::vector<fftw_complex *> delay_lag_product;
+  std::vector<std::vector<std::complex<double>>> delay_lag_product;
 
   /// Result array for each row of FFTW ambiguity calculation
-  std::vector<fftw_complex *> fftw_amb_out;
+  std::vector<std::vector<std::complex<double>>> fftw_amb_out;
 
   /// Vector of FFTW plans for each row of ambiguity calculation
   std::vector<fftw_plan> fftw_amb_plans;
 
   /// Copy of Receiver A buffer in fftw_complex type
-  fftw_complex *data_a_copy;
+  std::vector<std::complex<double>> data_a_copy;
 
   /// Copy of Receiver B buffer in fftw_complex type
-  fftw_complex *data_b_copy;
+  std::vector<std::complex<double>> data_b_copy;
 
   /// twiddle factors for pruned fft results
-  fftw_complex *twiddle_factors;
+  std::vector<std::complex<double>> twiddle_factors;
 
   /// Last time
   std::chrono::time_point<std::chrono::high_resolution_clock> last_time;

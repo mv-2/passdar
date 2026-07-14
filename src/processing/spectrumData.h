@@ -2,6 +2,7 @@
 #define SPECTRUMDATA_H
 
 #include <atomic>
+#include <complex.h>
 #include <fftw3.h>
 #include <mutex>
 #include <vector>
@@ -81,9 +82,9 @@ private:
   fftw_plan fft_plan;
 
   // Samples copied and casted from data_iq field buffers
-  fftw_complex *sample_buffer;
+  std::vector<std::complex<double>> sample_buffer;
 
   // Spectrum buffer to store FFTW3 DFT results
-  fftw_complex *spectrum_internal;
+  std::vector<std::complex<double>> spectrum_internal;
 };
 #endif

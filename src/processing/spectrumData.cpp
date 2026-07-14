@@ -22,8 +22,8 @@ SpecData::SpecData(Config cfg) {
   // Assign all spectrum containers
   std::vector<double> spec(buffer_size);
   spectrum.resize(buffer_size);
-  spectrum_internal = fftw_alloc_complex(buffer_size);
-  sample_buffer = fftw_alloc_complex(buffer_size);
+  spectrum_internal.resize(buffer_size);
+  sample_buffer.resize(buffer_size);
 
   // Set frequency vector values
   double sample_frequency = static_cast<double>(cfg.receiver_cfg.fs) / 1e6;
@@ -62,8 +62,10 @@ void SpecData::initialise_fftw_plan(void) {
   }
 
   // Create FFTW plan
-  fft_plan = fftw_plan_dft_1d(buffer_size, sample_buffer, spectrum_internal,
-                              FFTW_FORWARD, FFTW_EXHAUSTIVE);
+  fft_plan = fftw_plan_dft_1d(
+      buffer_size, reinterpret_cast<fftw_complex *>(sample_buffer.data()),
+      reinterpret_cast<fftw_complex *>(spectrum_internal.data()), FFTW_FORWARD,
+      FFTW_EXHAUSTIVE);
 
   // Export wisdom
   if (fftw_export_wisdom_to_filename(SPECTRUM_WISDOM_FILENAME.c_str()) == 0) {
@@ -98,10 +100,8 @@ void SpecData::calc_dft() {
   spectrum_iq->mutex_lock.lock();
   // Copy data and apply window
   for (unsigned int i = 0; i < buffer_size; i++) {
-    // real
-    sample_buffer[i][0] = dft_window[i] * spectrum_iq->samples[i][0];
-    // imag
-    sample_buffer[i][1] = dft_window[i] * spectrum_iq->samples[i][1];
+    sample_buffer[i] = dft_window[i] * std::complex(spectrum_iq->samples[i][0],
+                                                    spectrum_iq->samples[i][1]);
   }
   spectrum_iq->mutex_lock.unlock();
   // Execute FFTW plan
@@ -123,10 +123,7 @@ void SpecData::process_spectrum(std::atomic<bool> *exit_flag,
     calc_dft();
     for (unsigned int i = 0; i < buffer_size; i++) {
       id_swap = (i + buffer_size / 2 - 1) % buffer_size;
-      spectrum[i] = 20.0 * log10(std::sqrt(spectrum_internal[id_swap][0] *
-                                               spectrum_internal[id_swap][0] +
-                                           spectrum_internal[id_swap][1] *
-                                               spectrum_internal[id_swap][1]));
+      spectrum[i] = 20.0 * log10(std::abs(spectrum_internal[id_swap]));
     }
     mutex_lock.unlock();
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -137,6 +134,4 @@ void SpecData::process_spectrum(std::atomic<bool> *exit_flag,
 
   // Free resources
   fftw_destroy_plan(fft_plan);
-  fftw_free(spectrum_internal);
-  fftw_free(sample_buffer);
 }
