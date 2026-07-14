@@ -110,6 +110,8 @@ struct ProcessConfig {
   double ambiguity_lims[2];   /// [min, max] limits to display ambiguity surface
   AmbiguityType amb_fft_type; /// Enum to set use of full or pruned FFT in
                               /// ambiguity calculation
+  bool process_spectrum;      /// Flag to enable/disable spectrum processing
+  bool process_ambiguity;     /// Flag to enable/disable ambiguity processing
 
   ProcessConfig(nlohmann::json json_prcs); /// Constructor from Json object
   ProcessConfig();                         /// Default constructor

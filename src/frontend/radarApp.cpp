@@ -154,12 +154,23 @@ void RadarApp::run() {
     captureThread = std::thread([&] {
       receiver->run_capture(stream_a_data, stream_b_data, &exit_flag);
     });
-    spectrumThread_A = std::thread(
-        [&] { stream_a_data->process_spectrum(&exit_flag, &fftw_plan_mutex); });
-    spectrumThread_B = std::thread(
-        [&] { stream_b_data->process_spectrum(&exit_flag, &fftw_plan_mutex); });
-    ambiguityThread = std::thread(
-        [&] { radar_data->radar_process(&exit_flag, &fftw_plan_mutex); });
+    if (cfg.process_cfg.process_spectrum) {
+      spectrumThread_A = std::thread([&] {
+        stream_a_data->process_spectrum(&exit_flag, &fftw_plan_mutex);
+      });
+      spectrumThread_B = std::thread([&] {
+        stream_b_data->process_spectrum(&exit_flag, &fftw_plan_mutex);
+      });
+    } else {
+      stream_a_data->ready_flag.store(true);
+      stream_b_data->ready_flag.store(true);
+    }
+    if (cfg.process_cfg.process_ambiguity) {
+      ambiguityThread = std::thread(
+          [&] { radar_data->radar_process(&exit_flag, &fftw_plan_mutex); });
+    } else {
+      radar_data->ready_flag.store(true);
+    }
 
     // Update to rounded settings
     // NOTE: This isn't thread safe which is fine in this case unless computer
@@ -199,9 +210,13 @@ void RadarApp::run() {
 
     // Join threads to end processes
     exit_flag.store(true);
-    ambiguityThread.join();
-    spectrumThread_A.join();
-    spectrumThread_B.join();
+    if (cfg.process_cfg.process_spectrum) {
+      spectrumThread_A.join();
+      spectrumThread_B.join();
+    }
+    if (cfg.process_cfg.process_ambiguity) {
+      ambiguityThread.join();
+    }
     captureThread.join();
   }
 
@@ -712,6 +727,14 @@ void RadarApp::settings_frame_update(void) {
     ImGui::SameLine();
     ImGui::Text("LO Bandwidth: %s", LO_disp_vals[LO_id].c_str());
 
+    // Process spectrum flag
+    ImGui::TableNextColumn();
+    if (ImGui::Button(cfg.process_cfg.process_spectrum
+                          ? "Spectrum Processing Enabled"
+                          : "Spectrum Processing Disabled")) {
+      cfg.process_cfg.process_spectrum = !cfg.process_cfg.process_spectrum;
+    }
+
     // Row 12
     // RF Notch
     ImGui::TableNextRow();
@@ -719,6 +742,14 @@ void RadarApp::settings_frame_update(void) {
     if (ImGui::Button(cfg.receiver_cfg.rf_notch_enable ? "RF Notch Enabled"
                                                        : "RF Notch Disabled")) {
       cfg.receiver_cfg.rf_notch_enable = !cfg.receiver_cfg.rf_notch_enable;
+    }
+
+    // Process ambiguity flag
+    ImGui::TableNextColumn();
+    if (ImGui::Button(cfg.process_cfg.process_ambiguity
+                          ? "Ambiguity Processing Enabled"
+                          : "Ambiguity Processing Disabled")) {
+      cfg.process_cfg.process_ambiguity = !cfg.process_cfg.process_ambiguity;
     }
 
     // Row 13

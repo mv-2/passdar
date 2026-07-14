@@ -128,6 +128,8 @@ ProcessConfig::ProcessConfig(nlohmann::json json_prcs) {
   ambiguity_lims[0] = json_prcs["ambiguity_min"];
   ambiguity_lims[1] = json_prcs["ambiguity_max"];
   amb_fft_type = amb_type_map.at(json_prcs["ambiguity_fft_type"]);
+  process_spectrum = true;
+  process_ambiguity = true;
 }
 
 ProcessConfig::ProcessConfig() {
@@ -137,6 +139,8 @@ ProcessConfig::ProcessConfig() {
   max_speed = 350;
   _win_str = "Rectangular";
   dft_window = DftWindow::Rectangular;
+  process_spectrum = true;
+  process_ambiguity = true;
 }
 
 Config::Config(std::string cfg_path)
