@@ -322,7 +322,7 @@ void RadarData::radar_process(std::atomic<bool> *exit_flag,
     for (int r_id = 0; r_id < n_range; r_id++) {
       for (int j = 0; j < delay_lag_length; j++) {
         delay_lag_product[r_id][j] =
-            data_a_copy[j + r_id] * std::conj(data_b_copy[j]);
+            data_a_copy[j] * std::conj(data_b_copy[j + r_id]);
       }
     }
 
@@ -355,7 +355,7 @@ void RadarData::radar_process(std::atomic<bool> *exit_flag,
 }
 
 void RadarData::CA_CFAR() {
-  // Vector for averaginge
+  // Vector for averaging
   double ave_vals;
   int n_vals;
 
