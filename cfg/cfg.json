@@ -1,6 +1,6 @@
 {
   "receiver": {
-    "fc": 177500000,
+    "fc": 226500000,
     "agc_bandwidth_nr": 0,
     "agc_set_point_nr": 0,
     "gRdB_A": 40,
@@ -14,14 +14,16 @@
     "dab_notch_enable": false
   },
   "processing": {
-    "buffer_size": 524272,
+    "buffer_size": 524288,
     "max_range": 60000,
     "max_speed": 350,
     "dft_window": "Rectangular",
     "ambiguity_scale": "dB",
     "ambiguity_min": 1e2,
     "ambiguity_max": 140,
-    "ambiguity_fft_type": "Pruned"
+    "ambiguity_fft_type": "Full",
+    "process_spectrum": true,
+    "process_ambiguity": true
   },
   "detection": {
     "cfar_multiplier": 1.2,

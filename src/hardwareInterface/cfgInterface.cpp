@@ -128,8 +128,8 @@ ProcessConfig::ProcessConfig(nlohmann::json json_prcs) {
   ambiguity_lims[0] = json_prcs["ambiguity_min"];
   ambiguity_lims[1] = json_prcs["ambiguity_max"];
   amb_fft_type = amb_type_map.at(json_prcs["ambiguity_fft_type"]);
-  process_spectrum = true;
-  process_ambiguity = true;
+  process_spectrum = json_prcs["process_spectrum"];
+  process_ambiguity = json_prcs["process_ambiguity"];
 }
 
 ProcessConfig::ProcessConfig() {
