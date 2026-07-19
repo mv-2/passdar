@@ -1,0 +1,107 @@
+\documentclass{article}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{siunitx}
+\usepackage{tikz}
+\usepackage{booktabs}
+\usepackage{bm}
+\usepackage{xcolor}
+\usepackage[margin=0.75in]{geometry}
+\usepackage[calc, showdow,english]{datetime2}
+\usepackage[backend=biber, style=ieee]{biblatex}
+\usepackage{algorithm}
+\usepackage[noend]{algpseudocode}
+\addbibresource{references.bib}
+
+\algnewcommand{\Initialise}[1]{
+  \State \textbf{Initialise:}
+  \Statex \hspace*{\algorithmicindent}\parbox[t]{.8\linewidth}{\raggedright #1}
+}
+
+\DTMnewdatestyle{mydateformat}{
+  \renewcommand{\DTMdisplaydate}[4]{
+    \DTMshortweekdayname{##4},\space
+    \DTMmonthname{##2}\nobreakspace
+    \number##3,\space
+    \number##1
+  }
+  \renewcommand{\DTMDisplaydate}{\DTMdisplaydate}%
+}
+
+\title{Passive Radar Theory}
+\author{mv-2}
+\date{\today}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\clearpage
+
+\section{Background \& Motivation}
+The \texttt{passdar} project is intended for my own learning and extension of my signal processing skills.
+
+\section{Relevant Theory}
+\subsection{Clutter Removal}
+To remove the large amount of clutter present in search signals, a form of adaptive filter is required. This is achieved following the general techniques outlined by \textcite{ManningClutter}. Consider the received signal is equal to the combination of target reflections ($\bm{s}_{target}$), clutter ($\bm{s}_{clutter}$) and noise ($\bm{\nu}$).
+\begin{align*}
+  \bm{s}[n]&=\bm{s}_{target}[n]+\bm{s}_{clutter}[n]+\bm{\nu}[n]
+\end{align*}
+Clutter can be considered to be the reflections of the illuminator signal ($\bm{s}_{reference}$) off of objects at many distances. Assuming all non target objects are stationary, the received clutter signals must be direct copies of the illuminator signal scaled to the reflection strength. The equation below holds out to a delay of $M$ samples.
+\begin{align*}
+  \bm{s}_{clutter}[n]&=\sum_{k=0}^{M-1}b_k\cdot \bm{s}_{reference}[n-k]
+\end{align*}
+With a generic expression for clutter, a reconstructed target signal can be created. All variables marked with a hat are best estimates of the true values.
+\begin{align*}
+  \hat{\bm{s}}_{target}[n]&=\bm{s}[n]-\hat{\bm{s}}_{clutter}[n]\\
+                          &=\bm{s}[n]-\sum_{k=0}^{M-1}\hat{b}_k\cdot \bm{s}_{reference}[n-k]
+\end{align*}
+The true target signal can be expressed as the linear combination of $N$ echoes scaled by a weight of $w_k$, delayed by $d_k$ samples and Doppler shifted by a frequency of $f_k$.
+\begin{align*}
+  \bm{s}_{target}[n]&=\sum_{k=0}^{N-1}w_k\cdot \bm{s}_{reference}[n-d_k]\cdot e^{\left(\frac{2\cdot\pi\cdot i\cdot n\cdot f_k}{F_s}\right)}
+\end{align*}
+The signal $\bm{s}_{target}$ should be orthogonal to the signal $\bm{s}_{reference}$ for all non-zero $f_k$ values. Within our observed signal $\bm{s}$, we can filter out clutter as all delayed copies of the reference signal $\bm{s}_{reference}$ without effecting target reflections. Based on the property of orthogonality, the \textit{clutter subspace} can be removed from the overall signal space. The observation channel is projected onto the clutter space which allows for its contribution to be subtracted from the original signal.
+
+As presented in \textcite{ManningClutter}, this will be completed using a \textit{Least Mean Squares Filter}. Let the clutter space be defined as the matrix $X$ based on the following.
+\begin{align*}
+  X&=\begin{bmatrix} \bm{x}_0 & \hdots & \bm{x_{N-1}} \end{bmatrix}\\ 
+  \bm{x}_k&=\bm{s}_{reference}[n-k]
+\end{align*}
+Consider the following.
+\begin{align*}
+  \bm{s}_{target}+\bm{\nu} &= \bm{s}-\bm{s}_{clutter}\\
+  \implies s_{target}+\bm{\nu} &= \bm{s} - X\bm{\beta}\\
+\end{align*}
+Where $\bm{\beta}$ is a vector of the same length as each $x_k$ vector. The optimal value $\hat{\bm{\beta}}$ is found when $\bm{s}_{target} + \bm{\nu}$ is minimised. This will be noted as the residual $\hat{\bm{\epsilon}}$. When reformulating this problem it can be solved algebraically given that X defines the clutter space with linearly independent rows.
+\begin{align*}
+  \bm{s}_{target}+\bm{\nu} &= \bm{s} - X\bm{\beta}\\
+  \hat{\bm{\epsilon}} &= \bm{s} -X\hat{bm{\beta}}\\
+  \implies\hat{\bm{\beta}}&=\textrm{arg min}\left|\bm{s}-X\bm{\beta}\right|\\
+  \therefore \hat{\bm{\beta}}=(X^HX)^{-1}X^H\bm{s} 
+\end{align*}
+This is the naive solution to the problem but as $X$ may approach a singular matrix in some cases, some form of regularisation must be employed. Namely, Tikhonov regularisation will be used in this case.
+\begin{align*}
+  \hat{\bm{\beta}}&=(X^HX+\Gamma^H\Gamma)^{-1}X^H\bm{s}
+\end{align*}
+Where, $\Gamma=\alpha \mathbb{I}$ for a real constant $\alpha$. With this known, the entire process can be reformulated as follows.
+\begin{align*}
+  \bm{s}_{target}+\bm{\nu}&=\bm{s}-X(X^HX+\Gamma^H\Gamma)^{-1}X^H\bm{s}\\
+                          &=\left(\mathbb{I}-X(X^HX+\Gamma^H\Gamma)^{-1}X^H\right)\bm{s}
+\end{align*}
+
+\subsection{Ambiguity Approach}
+Consider the continuous representation of the ambiguity function.
+\begin{align*}
+  \chi(\tau, f)=\int_{-\infty}^{\infty}s_1(t)\cdot\overline{s_2(t-\tau)}\cdot e^{2\cdot i\cdot\pi\cdot f\cdot t}dt
+\end{align*}
+This simply collapses to the Fourier transform of the cross correlation of the signals $s_1(t)$ and $s_2(t-\tau)$. Where $s_1$ is the reference signal $\bm{s}_{reference}$ and $s_2$ is the target signal $s_{target}$ \parencite{YatrakisAmbiguity}. In discrete terms this may be expressed as the following.
+\begin{align*}
+  \chi(\tau, f)=\sum_{n=0}^{N-1}\bm{s}[n]\cdot\overline{\bm{s}_{target}[n-\tau]}\cdot e^{\left(\frac{-2\cdot\pi\cdot n\cdot f\cdot i}{Fs}\right)}
+\end{align*}
+Within the \texttt{passdar} project, each of the lagged cross-correlated signals will be precomputed before calculation of $N$ FFTs to calculate the entire ambiguity surface.
+
+
+\nocite{*}
+\printbibliography
+
+\end{document}

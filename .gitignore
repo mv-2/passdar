@@ -1,8 +1,25 @@
-*.out
-*.o
+# buld and compiler files ignored
 build/*
-*.ini
 .cache/*
+
+# imgui.ini
+*.ini
+
+# wisdom files to be generated per machine
 cfg/*.wisdom
+
+# vcpkg files
 vcpkg_installed
+
+# Symbolic link to compile commands
 compile_commands.json
+
+# LaTex artefacts ignored
+docs/*.log
+docs/*.bbl
+docs/*.aux
+docs/*.bcf
+docs/*.blg
+docs/*.pdf
+docs/*.xml
+docs/*.toc
