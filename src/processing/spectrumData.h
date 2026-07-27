@@ -58,8 +58,11 @@ public:
   /// Raw IQ data sent to ambiguity calculation
   ReceiverRawIQ *ambiguity_iq;
 
-  /// Maximum number of samples stored by object
-  unsigned int buffer_size;
+  /// Number of samples per block
+  unsigned int sample_block_size;
+
+  /// Buffer size for calculation spectrum
+  unsigned int total_buffer_size;
 
   /// Flag denoting when processing data is ready to be accessed
   std::atomic<bool> ready_flag;

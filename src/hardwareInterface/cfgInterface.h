@@ -103,7 +103,9 @@ struct ReceiverConfig {
 struct ProcessConfig {
   double max_range;             /// Maximum range/time-delay to interrogate
   double max_speed;             /// Maximum speed to calculate
-  int buffer_size;              /// Length of sample buffer
+  double frequency_step;        //// Frequency step size
+  int sample_block_size;        /// Number of samples measured for each
+                                /// spectrum/CAF
   DftWindow dft_window;         /// DFT window (applied to spectra only)
   std::string _win_str;         /// String to parse & display window type
   DisplayScale ambiguity_scale; /// Scale to calculate ambiguity surface

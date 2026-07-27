@@ -75,7 +75,7 @@ Consider the following.
 Where $\bm{\beta}$ is a vector of the same length as each $x_k$ vector. The optimal value $\hat{\bm{\beta}}$ is found when $\bm{s}_{target} + \bm{\nu}$ is minimised. This will be noted as the residual $\hat{\bm{\epsilon}}$. When reformulating this problem it can be solved algebraically given that X defines the clutter space with linearly independent rows.
 \begin{align*}
   \bm{s}_{target}+\bm{\nu} &= \bm{s} - X\bm{\beta}\\
-  \hat{\bm{\epsilon}} &= \bm{s} -X\hat{bm{\beta}}\\
+  \hat{\bm{\epsilon}} &= \bm{s} -X\hat{\bm{\beta}}\\
   \implies\hat{\bm{\beta}}&=\textrm{arg min}\left|\bm{s}-X\bm{\beta}\right|\\
   \therefore \hat{\bm{\beta}}=(X^HX)^{-1}X^H\bm{s} 
 \end{align*}

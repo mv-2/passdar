@@ -119,7 +119,8 @@ ReceiverConfig::ReceiverConfig() {
 
 ProcessConfig::ProcessConfig(nlohmann::json json_prcs) {
   // Assign fields based on json object
-  buffer_size = json_prcs["buffer_size"];
+  sample_block_size = json_prcs["sample_block_size"];
+  frequency_step = json_prcs["frequency_step"];
   max_range = json_prcs["max_range"];
   max_speed = json_prcs["max_speed"];
   dft_window = window_map.at(json_prcs["dft_window"]);
@@ -134,7 +135,8 @@ ProcessConfig::ProcessConfig(nlohmann::json json_prcs) {
 
 ProcessConfig::ProcessConfig() {
   // Assign defaults
-  buffer_size = 262140;
+  sample_block_size = 4096;
+  frequency_step = 4;
   max_range = 50000;
   max_speed = 350;
   _win_str = "Rectangular";

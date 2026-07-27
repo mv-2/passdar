@@ -444,9 +444,8 @@ void RadarApp::settings_frame_update(void) {
     if (ImGui::InputInt("Centre Frequency [Hz]", &cfg.receiver_cfg.fc, 100000,
                         100000)) {
       // Ensure speed steps are consistent with buffer size and sample rate
-      speed_step = (static_cast<double>(cfg.receiver_cfg.fs) /
-                    cfg.process_cfg.buffer_size) *
-                   PHASE_VELOCITY / (2 * cfg.receiver_cfg.fc);
+      speed_step = cfg.process_cfg.frequency_step * PHASE_VELOCITY /
+                   (2 * cfg.receiver_cfg.fc);
 
       // Set exact max_speed
       cfg.process_cfg.max_speed = n_speed * speed_step;
@@ -454,13 +453,12 @@ void RadarApp::settings_frame_update(void) {
 
     // Buffer size
     ImGui::TableNextColumn();
-    ImGui::InputInt("Sample Buffer Length", &cfg.process_cfg.buffer_size, 1,
+    ImGui::InputInt("Sample Block Size", &cfg.process_cfg.sample_block_size, 1,
                     1000);
     if (ImGui::IsItemDeactivatedAfterEdit()) {
       // Ensure speed steps are consistent with buffer size and sample rate
-      speed_step = (static_cast<double>(cfg.receiver_cfg.fs) /
-                    cfg.process_cfg.buffer_size) *
-                   PHASE_VELOCITY / (2 * cfg.receiver_cfg.fc);
+      speed_step = cfg.process_cfg.frequency_step * PHASE_VELOCITY /
+                   (2 * cfg.receiver_cfg.fc);
 
       // Set exact max_speed
       cfg.process_cfg.max_speed = n_speed * speed_step;
@@ -481,9 +479,8 @@ void RadarApp::settings_frame_update(void) {
       update_range_vars();
 
       // Ensure speed steps are consistent with buffer size and sample rate
-      speed_step = (static_cast<double>(cfg.receiver_cfg.fs) /
-                    cfg.process_cfg.buffer_size) *
-                   PHASE_VELOCITY / (2 * cfg.receiver_cfg.fc);
+      speed_step = cfg.process_cfg.frequency_step * PHASE_VELOCITY /
+                   (2 * cfg.receiver_cfg.fc);
 
       // Set number of speed steps
       n_speed = cfg.process_cfg.max_speed / speed_step;
@@ -657,9 +654,8 @@ void RadarApp::settings_frame_update(void) {
       update_range_vars();
 
       // Ensure speed steps are consistent with buffer size and sample rate
-      speed_step = (static_cast<double>(cfg.receiver_cfg.fs) /
-                    cfg.process_cfg.buffer_size) *
-                   PHASE_VELOCITY / (2 * cfg.receiver_cfg.fc);
+      speed_step = cfg.process_cfg.frequency_step * PHASE_VELOCITY /
+                   (2 * cfg.receiver_cfg.fc);
 
       // Set number of speed steps
       n_speed = cfg.process_cfg.max_speed / speed_step;

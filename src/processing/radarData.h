@@ -111,10 +111,10 @@ private:
   std::vector<fftw_plan> fftw_amb_plans;
 
   /// Copy of Receiver A buffer in fftw_complex type
-  std::vector<std::complex<double>> data_a_copy;
+  std::vector<std::complex<double>> reference_data;
 
   /// Copy of Receiver B buffer in fftw_complex type
-  std::vector<std::complex<double>> data_b_copy;
+  std::vector<std::complex<double>> observation_data;
 
   /// twiddle factors for pruned fft results
   std::vector<std::complex<double>> twiddle_factors;
@@ -122,8 +122,11 @@ private:
   /// Last time
   std::chrono::time_point<std::chrono::high_resolution_clock> last_time;
 
-  /// Length of sample buffer
-  int sample_buffer_size;
+  /// Number of samples in buffer
+  int sample_block_size;
+
+  /// Total buffer length for FFT
+  int total_buffer_size;
 
   /// Number of points used for cross-correlations in ambiguity calculation
   int delay_lag_length;

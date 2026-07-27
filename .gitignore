@@ -20,6 +20,8 @@ docs/*.bbl
 docs/*.aux
 docs/*.bcf
 docs/*.blg
-docs/*.pdf
 docs/*.xml
 docs/*.toc
+
+# Intermediate note taking
+deleteme.md

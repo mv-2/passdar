@@ -13,38 +13,39 @@ SpecData::SpecData(Config cfg) {
   // Not ready
   ready_flag.store(false);
 
-  buffer_size = cfg.process_cfg.buffer_size;
+  // Define buffer sizes
+  sample_block_size = cfg.process_cfg.sample_block_size;
+  total_buffer_size = cfg.receiver_cfg.fs / cfg.process_cfg.sample_block_size;
 
   // Pointer to raw data object
-  spectrum_iq = new ReceiverRawIQ(buffer_size);
-  ambiguity_iq = new ReceiverRawIQ(buffer_size);
+  spectrum_iq = new ReceiverRawIQ(sample_block_size);
+  ambiguity_iq = new ReceiverRawIQ(sample_block_size);
 
   // Assign all spectrum containers
-  std::vector<double> spec(buffer_size);
-  spectrum.resize(buffer_size);
-  spectrum_internal.resize(buffer_size);
-  sample_buffer.resize(buffer_size);
+  spectrum.resize(total_buffer_size);
+  spectrum_internal.resize(total_buffer_size);
+  sample_buffer.resize(sample_block_size);
 
   // Set frequency vector values
   double sample_frequency = static_cast<double>(cfg.receiver_cfg.fs) / 1e6;
-  for (int i = -static_cast<int>(buffer_size) / 2;
-       i < static_cast<int>(buffer_size) / 2; i++) {
+  for (int i = -static_cast<int>(total_buffer_size) / 2;
+       i < static_cast<int>(total_buffer_size) / 2; i++) {
     frequency.push_back((static_cast<double>(i) - 0.5) * sample_frequency /
-                            (static_cast<int>(buffer_size)) +
+                            (static_cast<int>(total_buffer_size)) +
                         static_cast<double>(cfg.receiver_cfg.fc) / 1e6);
   }
 
   // Assign DFT window
   switch (cfg.process_cfg.dft_window) {
   case DftWindow::Hanning: {
-    dft_window.reserve(buffer_size);
-    for (unsigned int i = 0; i < buffer_size; i++) {
-      dft_window[i] = 0.5 * (1.0 - cos(2 * M_PI * i / (buffer_size - 1)));
+    dft_window.reserve(sample_block_size);
+    for (unsigned int i = 0; i < sample_block_size; i++) {
+      dft_window[i] = 0.5 * (1.0 - cos(2 * M_PI * i / (sample_block_size - 1)));
     }
     break;
   }
   case DftWindow::Rectangular: {
-    dft_window.resize(buffer_size, 1.0);
+    dft_window.resize(sample_block_size, 1.0);
     break;
   }
   default: {
@@ -63,7 +64,7 @@ void SpecData::initialise_fftw_plan(void) {
 
   // Create FFTW plan
   fft_plan = fftw_plan_dft_1d(
-      buffer_size, reinterpret_cast<fftw_complex *>(sample_buffer.data()),
+      total_buffer_size, reinterpret_cast<fftw_complex *>(sample_buffer.data()),
       reinterpret_cast<fftw_complex *>(spectrum_internal.data()), FFTW_FORWARD,
       FFTW_EXHAUSTIVE);
 
@@ -99,7 +100,7 @@ void SpecData::calc_dft() {
   // Hold mutex to ensure no other threads read from buffer
   spectrum_iq->mutex_lock.lock();
   // Copy data and apply window
-  for (unsigned int i = 0; i < buffer_size; i++) {
+  for (unsigned int i = 0; i < sample_block_size; i++) {
     sample_buffer[i] = dft_window[i] * std::complex(spectrum_iq->samples[i][0],
                                                     spectrum_iq->samples[i][1]);
   }
@@ -121,8 +122,8 @@ void SpecData::process_spectrum(std::atomic<bool> *exit_flag,
     int id_swap;
     mutex_lock.lock();
     calc_dft();
-    for (unsigned int i = 0; i < buffer_size; i++) {
-      id_swap = (i + buffer_size / 2 - 1) % buffer_size;
+    for (unsigned int i = 0; i < total_buffer_size; i++) {
+      id_swap = (i + total_buffer_size / 2 - 1) % total_buffer_size;
       spectrum[i] = 20.0 * log10(std::abs(spectrum_internal[id_swap]));
     }
     mutex_lock.unlock();
