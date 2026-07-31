@@ -24,7 +24,9 @@ RadarData::RadarData(Config cfg, SpecData *_stream_a_data,
   stream_a_data = _stream_a_data;
   stream_b_data = _stream_b_data;
   sample_block_size = cfg.process_cfg.sample_block_size;
-  total_buffer_size = cfg.receiver_cfg.fs / cfg.process_cfg.frequency_step;
+  total_buffer_size =
+      static_cast<int>(static_cast<double>(cfg.receiver_cfg.fs) /
+                       cfg.process_cfg.frequency_step);
 
   // Sample Frequency
   sample_frequency = cfg.receiver_cfg.fs;
@@ -308,7 +310,7 @@ void RadarData::radar_process(std::atomic<bool> *exit_flag,
     // lock iqdata and copy samples
     stream_a_data->ambiguity_iq->mutex_lock.lock();
     stream_b_data->ambiguity_iq->mutex_lock.lock();
-    for (int i = 0; i < total_buffer_size; i++) {
+    for (int i = 0; i < sample_block_size; i++) {
       reference_data[i] =
           std::complex<double>(stream_a_data->ambiguity_iq->samples[i][0],
                                stream_a_data->ambiguity_iq->samples[i][1]);

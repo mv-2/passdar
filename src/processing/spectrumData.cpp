@@ -15,7 +15,9 @@ SpecData::SpecData(Config cfg) {
 
   // Define buffer sizes
   sample_block_size = cfg.process_cfg.sample_block_size;
-  total_buffer_size = cfg.receiver_cfg.fs / cfg.process_cfg.sample_block_size;
+  total_buffer_size =
+      static_cast<int>(static_cast<double>(cfg.receiver_cfg.fs) /
+                       cfg.process_cfg.frequency_step);
 
   // Pointer to raw data object
   spectrum_iq = new ReceiverRawIQ(sample_block_size);
@@ -24,7 +26,7 @@ SpecData::SpecData(Config cfg) {
   // Assign all spectrum containers
   spectrum.resize(total_buffer_size);
   spectrum_internal.resize(total_buffer_size);
-  sample_buffer.resize(sample_block_size);
+  sample_buffer.resize(total_buffer_size, 0.0);
 
   // Set frequency vector values
   double sample_frequency = static_cast<double>(cfg.receiver_cfg.fs) / 1e6;
