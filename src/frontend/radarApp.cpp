@@ -611,10 +611,10 @@ void RadarApp::settings_frame_update(void) {
     ImGui::InputInt("Receiver B gain reduction [dB]", &cfg.receiver_cfg.gRdB_B,
                     1, 1);
 
-    // Speed Step
+    // Frequency Step
     ImGui::TableNextColumn();
-    ImGui::InputDouble("Speed Step [m/s]", &speed_step, 1, 1, "%.2f",
-                       ImGuiInputTextFlags_ReadOnly);
+    ImGui::InputDouble("Frequency Step [Hz]", &cfg.process_cfg.frequency_step,
+                       0.1, 0.1, "%.3f");
 
     // Row 7
     // LNA State
@@ -624,20 +624,10 @@ void RadarApp::settings_frame_update(void) {
     ImGui::SameLine();
     ImGui::Text("LNA State: %d", cfg.receiver_cfg.lna_state);
 
-    // Ambiguity scale
+    // Speed Step
     ImGui::TableNextColumn();
-    if (ImGui::Button(cfg.process_cfg.ambiguity_scale == DisplayScale::Linear
-                          ? "Linear Ambiguity Scale"
-                          : "dB Ambiguity Scale")) {
-      switch (cfg.process_cfg.ambiguity_scale) {
-      case DisplayScale::Linear:
-        cfg.process_cfg.ambiguity_scale = DisplayScale::dB;
-        break;
-      case DisplayScale::dB:
-        cfg.process_cfg.ambiguity_scale = DisplayScale::Linear;
-        break;
-      }
-    }
+    ImGui::InputDouble("Speed Step [m/s]", &speed_step, 1, 1, "%.2f",
+                       ImGuiInputTextFlags_ReadOnly);
 
     // Row 8
     // Decimation Factor
@@ -664,10 +654,20 @@ void RadarApp::settings_frame_update(void) {
       cfg.process_cfg.max_speed = n_speed * speed_step;
     }
 
-    // Ambiguity scale min
+    // Ambiguity scale
     ImGui::TableNextColumn();
-    ImGui::InputDouble("Ambiguity Minimum", &cfg.process_cfg.ambiguity_lims[0],
-                       1, 100, "%.1f");
+    if (ImGui::Button(cfg.process_cfg.ambiguity_scale == DisplayScale::Linear
+                          ? "Linear Ambiguity Scale"
+                          : "dB Ambiguity Scale")) {
+      switch (cfg.process_cfg.ambiguity_scale) {
+      case DisplayScale::Linear:
+        cfg.process_cfg.ambiguity_scale = DisplayScale::dB;
+        break;
+      case DisplayScale::dB:
+        cfg.process_cfg.ambiguity_scale = DisplayScale::Linear;
+        break;
+      }
+    }
 
     // Row 9
     // IF type
@@ -681,8 +681,16 @@ void RadarApp::settings_frame_update(void) {
     ImGui::Text("IF Bandwidth: %.3f kHz",
                 static_cast<double>(if_vals[IF_id]) / 1000);
 
-    // Ambiguity Scale Max
+    // Ambiguity scale min
+    float column_width = ImGui::GetColumnWidth();
+    float text_width = ImGui::CalcTextSize("Ambiguity Minimum").x;
+    ImGui::SetNextItemWidth(column_width / 2 - text_width - 10);
     ImGui::TableNextColumn();
+    ImGui::InputDouble("Ambiguity Minimum", &cfg.process_cfg.ambiguity_lims[0],
+                       1, 100, "%.1f");
+    // Ambiguity Scale Max
+    ImGui::SetNextItemWidth(column_width / 2 - text_width - 10);
+    ImGui::SameLine();
     ImGui::InputDouble("Ambiguity Maximum", &cfg.process_cfg.ambiguity_lims[1],
                        1, 100, "%.1f");
 
