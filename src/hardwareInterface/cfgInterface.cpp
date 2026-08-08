@@ -121,6 +121,7 @@ ProcessConfig::ProcessConfig(nlohmann::json json_prcs) {
   // Assign fields based on json object
   sample_block_size = json_prcs["sample_block_size"];
   frequency_step = json_prcs["frequency_step"];
+  filter_length = json_prcs["filter_length"];
   max_range = json_prcs["max_range"];
   max_speed = json_prcs["max_speed"];
   dft_window = window_map.at(json_prcs["dft_window"]);
@@ -143,6 +144,7 @@ ProcessConfig::ProcessConfig() {
   dft_window = DftWindow::Rectangular;
   process_spectrum = true;
   process_ambiguity = true;
+  filter_length = 1;
 }
 
 Config::Config(std::string cfg_path)

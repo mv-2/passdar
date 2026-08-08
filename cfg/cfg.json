@@ -15,7 +15,8 @@
   },
   "processing": {
     "frequency_step": 1,
-    "sample_block_size": 4096,
+    "sample_block_size": 125000,
+    "filter_length": 100,
     "max_range": 60000,
     "max_speed": 350,
     "dft_window": "Rectangular",

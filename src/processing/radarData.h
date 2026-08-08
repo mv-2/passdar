@@ -1,6 +1,7 @@
 #ifndef RADARDATA_H
 #define RADARDATA_H
 
+#include <Eigen/Dense>
 #include <atomic>
 #include <chrono>
 #include <complex.h>
@@ -97,6 +98,9 @@ private:
    * @brief Calculates ambiguity surface over single range row
    */
   void ambiguity_row_calc(int row);
+
+  // Clutter basis matrix
+  Eigen::MatrixXcd clutter_basis;
 
   // Detection config
   DetectionConfig detection_config;

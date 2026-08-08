@@ -106,6 +106,7 @@ struct ProcessConfig {
   double frequency_step;        //// Frequency step size
   int sample_block_size;        /// Number of samples measured for each
                                 /// spectrum/CAF
+  int filter_length;            /// Length of LMS clutter filter
   DftWindow dft_window;         /// DFT window (applied to spectra only)
   std::string _win_str;         /// String to parse & display window type
   DisplayScale ambiguity_scale; /// Scale to calculate ambiguity surface

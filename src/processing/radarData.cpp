@@ -1,3 +1,4 @@
+#include <Eigen/Core>
 #include <GL/gl.h>
 #include <GLFW/glfw3.h>
 #include <chrono>
@@ -53,6 +54,10 @@ RadarData::RadarData(Config cfg, SpecData *_stream_a_data,
 
   // range points
   n_range = static_cast<int>(cfg.process_cfg.max_range / range_step) + 1;
+
+  // Size clutter matrix
+  clutter_basis.resize(cfg.process_cfg.filter_length, n_range);
+  clutter_basis.setZero();
 
   // preallocate ambiguity
   ambiguity = LeftRight<double>(n_range * ambiguity_columns);
@@ -321,7 +326,28 @@ void RadarData::radar_process(std::atomic<bool> *exit_flag,
     stream_a_data->ambiguity_iq->mutex_lock.unlock();
     stream_b_data->ambiguity_iq->mutex_lock.unlock();
 
+    // Filtering step
+    // Create clutter basis
+    for (int i = 0; i < n_range; i++) {
+      clutter_basis.col(i) = Eigen::Map<Eigen::VectorXcd>(
+          &reference_data[n_range - i - 1], clutter_basis.rows());
+    }
+
+    // Cast observation_data to Eigen compatible format
+    Eigen::VectorXcd observation_vector = Eigen::Map<Eigen::VectorXcd>(
+        observation_data.data(), clutter_basis.rows());
+
+    // Compute projection residual
+    Eigen::VectorXcd projection_residual =
+        clutter_basis * (clutter_basis.adjoint() * clutter_basis).inverse() *
+        clutter_basis.adjoint() * observation_vector;
+
+    for (int i = 0; i < projection_residual.size(); i++) {
+      observation_data[i] = observation_data[i] - projection_residual[i];
+    }
+
     // Pre calculate delay signal
+    // TODO: Make this a std::vector of eigen::vectorxcd objects
     for (int r_id = 0; r_id < n_range; r_id++) {
       for (int j = 0; j < delay_lag_length; j++) {
         delay_lag_product[r_id][j] =
@@ -333,6 +359,7 @@ void RadarData::radar_process(std::atomic<bool> *exit_flag,
     for (int i = 0; i < n_range; i++) {
       amb_threads.emplace_back(&RadarData::ambiguity_row_calc, this, i);
     }
+
     // Join threads to close
     for (int i = 0; i < n_range; i++) {
       amb_threads.front().join();

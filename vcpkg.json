@@ -13,6 +13,7 @@
     },
     "implot",
     "glfw3",
-    "opengl"
+    "opengl",
+    "eigen3"
   ]
 }

@@ -39,6 +39,7 @@ find_package(implot CONFIG REQUIRED)
 find_package(glfw3 CONFIG REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
+find_package(Eigen3 REQUIRED)
 target_link_libraries(passdar PRIVATE
   FFTW3::fftw3
   imgui::imgui
@@ -46,4 +47,5 @@ target_link_libraries(passdar PRIVATE
   OpenGL::GL
   glfw
   nlohmann_json::nlohmann_json
+  Eigen3::Eigen
 )
