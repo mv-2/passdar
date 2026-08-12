@@ -55,8 +55,8 @@ void RadarApp::setup(void) {
   restart.store(false);
 }
 
-void spinner(float radius, ImVec2 pos) {
-  // ImGui spinner for initialisation
+void throbber(float radius, ImVec2 pos) {
+  // ImGui throbber for initialisation
 
   // Set size and drawing canvas
   ImVec2 size = ImVec2(radius * 2, radius * 2);
@@ -339,9 +339,9 @@ void RadarApp::ambiguity_slice_frame_update(void) {
 
   // Assign range values at speed point
   for (int i = 0; i < radar_data->n_range; i++) {
-    speed_slice[i] =
-        radar_data->ambiguity.read(i * radar_data->ambiguity_columns +
-                                   speed_slice_slider + radar_data->n_speed);
+    speed_slice[i] = radar_data->ambiguity.read(
+        (radar_data->n_range - i - 1) * radar_data->ambiguity_columns +
+        speed_slice_slider + radar_data->n_speed);
   }
 
   // Range slider label
@@ -372,7 +372,7 @@ void RadarApp::ambiguity_slice_frame_update(void) {
   ImGui::SameLine();
   ImGui::PushItemWidth(half_width);
   ImGui::SliderInt("##Speed ID", &speed_slice_slider, -radar_data->n_speed,
-                   radar_data->n_speed, "");
+                   radar_data->n_speed - 2, "");
   ImGui::PopItemWidth();
 
   // Slice Subplots
@@ -809,11 +809,11 @@ void RadarApp::update_window(GLFWwindow *window, bool *show_window) {
 
   if (!receiver->ready_flag.load() || !stream_a_data->ready_flag.load() ||
       !stream_b_data->ready_flag.load() || !radar_data->ready_flag.load()) {
-    // Draw spinner until all threads are ready
+    // Draw throbber until all threads are ready
     ImVec2 pos;
     pos.x = ImGui::GetContentRegionAvail().x / 2;
     pos.y = ImGui::GetContentRegionAvail().y / 2;
-    spinner(100, pos);
+    throbber(100, pos);
   } else {
 
     // Tab bar to select each function
