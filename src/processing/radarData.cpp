@@ -329,8 +329,9 @@ void RadarData::radar_process(std::atomic<bool> *exit_flag,
     // Filtering step
     // Create clutter basis
     for (int i = 0; i < n_range; i++) {
-      clutter_basis.col(i) = Eigen::Map<Eigen::VectorXcd>(
-          &reference_data[n_range - i - 1], clutter_basis.rows());
+      clutter_basis.col(clutter_basis.cols() - i - 1) =
+          Eigen::Map<Eigen::VectorXcd>(&reference_data[n_range - i - 1],
+                                       clutter_basis.rows());
     }
 
     // Cast observation_data to Eigen compatible format
@@ -343,7 +344,7 @@ void RadarData::radar_process(std::atomic<bool> *exit_flag,
         clutter_basis.adjoint() * observation_vector;
 
     for (int i = 0; i < projection_residual.size(); i++) {
-      observation_data[i] = observation_data[i] - projection_residual[i];
+      observation_data[i] -= projection_residual[i];
     }
 
     // Pre calculate delay signal
