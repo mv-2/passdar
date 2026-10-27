@@ -102,6 +102,9 @@ private:
   // Clutter basis matrix
   Eigen::MatrixXcd clutter_basis;
 
+  // Regularisation matrix
+  Eigen::MatrixXcd regularisation_matrix;
+
   // Detection config
   DetectionConfig detection_config;
 

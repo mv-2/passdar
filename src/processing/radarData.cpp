@@ -59,6 +59,12 @@ RadarData::RadarData(Config cfg, SpecData *_stream_a_data,
   clutter_basis.resize(cfg.process_cfg.filter_length, n_range);
   clutter_basis.setZero();
 
+  // Set regularisation matrix
+  regularisation_matrix = cfg.process_cfg.regularisation_parameter *
+                          Eigen::MatrixXcd::Identity(n_range, n_range);
+  regularisation_matrix =
+      regularisation_matrix.adjoint() * regularisation_matrix;
+
   // preallocate ambiguity
   ambiguity = LeftRight<double>(n_range * ambiguity_columns);
 
@@ -340,7 +346,9 @@ void RadarData::radar_process(std::atomic<bool> *exit_flag,
 
     // Compute projection residual
     Eigen::VectorXcd projection_residual =
-        clutter_basis * (clutter_basis.adjoint() * clutter_basis).inverse() *
+        clutter_basis *
+        (clutter_basis.adjoint() * clutter_basis + regularisation_matrix)
+            .inverse() *
         clutter_basis.adjoint() * observation_vector;
 
     for (int i = 0; i < projection_residual.size(); i++) {

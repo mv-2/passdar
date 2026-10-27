@@ -132,6 +132,7 @@ ProcessConfig::ProcessConfig(nlohmann::json json_prcs) {
   amb_fft_type = amb_type_map.at(json_prcs["ambiguity_fft_type"]);
   process_spectrum = json_prcs["process_spectrum"];
   process_ambiguity = json_prcs["process_ambiguity"];
+  regularisation_parameter = json_prcs["regularisation_parameter"];
 }
 
 ProcessConfig::ProcessConfig() {
@@ -145,6 +146,7 @@ ProcessConfig::ProcessConfig() {
   process_spectrum = true;
   process_ambiguity = true;
   filter_length = 1;
+  regularisation_parameter = 1;
 }
 
 Config::Config(std::string cfg_path)

@@ -101,20 +101,21 @@ struct ReceiverConfig {
  * @brief Processing parameters
  */
 struct ProcessConfig {
-  double max_range;             /// Maximum range/time-delay to interrogate
-  double max_speed;             /// Maximum speed to calculate
-  double frequency_step;        //// Frequency step size
-  int sample_block_size;        /// Number of samples measured for each
-                                /// spectrum/CAF
-  int filter_length;            /// Length of LMS clutter filter
+  double max_range;                /// Maximum range/time-delay to interrogate
+  double max_speed;                /// Maximum speed to calculate
+  double frequency_step;           /// Frequency step size
+  double regularisation_parameter; /// L2 regularisation parameter (lambda)
+  int sample_block_size;           /// Number of samples measured for each
+                                   /// spectrum/CAF
+  int filter_length;               /// Length of LMS clutter filter
+  bool process_spectrum;        /// Flag to enable/disable spectrum processing
+  bool process_ambiguity;       /// Flag to enable/disable ambiguity processing
   DftWindow dft_window;         /// DFT window (applied to spectra only)
   std::string _win_str;         /// String to parse & display window type
   DisplayScale ambiguity_scale; /// Scale to calculate ambiguity surface
   double ambiguity_lims[2];   /// [min, max] limits to display ambiguity surface
   AmbiguityType amb_fft_type; /// Enum to set use of full or pruned FFT in
                               /// ambiguity calculation
-  bool process_spectrum;      /// Flag to enable/disable spectrum processing
-  bool process_ambiguity;     /// Flag to enable/disable ambiguity processing
 
   ProcessConfig(nlohmann::json json_prcs); /// Constructor from Json object
   ProcessConfig();                         /// Default constructor
